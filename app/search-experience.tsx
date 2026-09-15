@@ -67,6 +67,9 @@ export function MechanicSearchExperience() {
             MechanicMatchFL helps South Florida drivers find relevant local repair providers based on
             vehicle, repair need, and ZIP code.
           </p>
+          <Link className="provider-entry-link" href="/list-your-business">
+            Are you a mechanic? List your business
+          </Link>
         </div>
 
         <form className="search-panel" onSubmit={handleSubmit} noValidate>
