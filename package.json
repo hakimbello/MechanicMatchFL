@@ -2,16 +2,24 @@
   "name": "mechanicmatchfl",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "next": "16.3.5",
     "react": "19.3.0",
     "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.1",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "typescript": "5.9.3"
   },
   "engines": {
     "node": ">=20.9.0"
