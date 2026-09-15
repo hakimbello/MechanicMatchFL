@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ContactActions } from "./contact-actions";
+import { ProfileAnalytics } from "./profile-analytics";
 import {
   buildProviderProfileView,
   getPublicProviderById,
@@ -59,6 +60,11 @@ export default async function MechanicProfilePage({ params, searchParams }: Mech
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(structuredData) }}
+      />
+      <ProfileAnalytics
+        providerId={provider.id}
+        providerType={provider.type}
+        serviceCategory={profile.matchContext?.serviceCategory}
       />
       <main className="page-shell profile-shell">
         <Link className="back-link" href="/">

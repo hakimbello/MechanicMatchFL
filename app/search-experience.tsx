@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useMemo, useState, type FormEvent } from "react";
 
 import {
+  recordMechanicSearchResultsViewed,
+  recordMechanicSearchSubmitted
+} from "../src/analytics/client.ts";
+import {
   EMPTY_SEARCH_FORM,
   SERVICE_OPTIONS,
   VEHICLE_MAKE_OPTIONS,
@@ -55,6 +59,15 @@ export function MechanicSearchExperience() {
 
     setErrors({});
     setResults(search.results);
+    recordMechanicSearchSubmitted({
+      serviceCategory: search.request.serviceCategory,
+      vehicleMake: search.request.vehicle.make,
+      zip: search.request.zip
+    });
+    recordMechanicSearchResultsViewed({
+      serviceCategory: search.request.serviceCategory,
+      resultCount: search.results.length
+    });
   }
 
   return (

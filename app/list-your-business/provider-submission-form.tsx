@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useState, type ChangeEvent, type FormEvent } from "react";
 
 import {
+  recordProviderSubmissionCompleted,
+  recordProviderSubmissionStarted
+} from "../../src/analytics/client.ts";
+import {
   LAUNCH_COUNTIES,
   PROVIDER_SPECIALTIES,
   PROVIDER_TYPES,
@@ -32,8 +36,20 @@ export function ProviderSubmissionForm() {
   const [form, setForm] = useState<ProviderSubmissionInput>(EMPTY_PROVIDER_SUBMISSION);
   const [errors, setErrors] = useState<SubmissionFieldErrors>({});
   const [submittedName, setSubmittedName] = useState<string | null>(null);
+  const [hasStartedSubmission, setHasStartedSubmission] = useState(false);
+
+  function markSubmissionStarted() {
+    setHasStartedSubmission((current) => {
+      if (!current) {
+        recordProviderSubmissionStarted();
+      }
+
+      return true;
+    });
+  }
 
   function updateField<Field extends keyof ProviderSubmissionInput>(field: Field, value: ProviderSubmissionInput[Field]) {
+    markSubmissionStarted();
     setForm((current) => ({ ...current, [field]: value }));
     setErrors((current) => {
       const next = { ...current };
@@ -43,6 +59,7 @@ export function ProviderSubmissionForm() {
   }
 
   function toggleService(service: ProviderSpecialty) {
+    markSubmissionStarted();
     setForm((current) => {
       const services = current.services.includes(service)
         ? current.services.filter((item) => item !== service)
@@ -57,6 +74,7 @@ export function ProviderSubmissionForm() {
   }
 
   function toggleServiceCounty(county: LaunchCounty) {
+    markSubmissionStarted();
     setForm((current) => {
       const serviceCounties = current.serviceCounties.includes(county)
         ? current.serviceCounties.filter((item) => item !== county)
@@ -79,6 +97,11 @@ export function ProviderSubmissionForm() {
     setSubmittedName(result.record.businessName);
     setErrors({});
     setForm(EMPTY_PROVIDER_SUBMISSION);
+    setHasStartedSubmission(false);
+    recordProviderSubmissionCompleted({
+      providerType: result.record.providerType,
+      locationKind: result.record.locationKind
+    });
   }
 
   return (

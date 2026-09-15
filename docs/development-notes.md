@@ -26,3 +26,9 @@ The `/admin/providers` route is development-only. It is intentionally not repres
 M6 adds a technical SEO foundation without creating mass landing pages. See `docs/seo-foundation.md` for canonical URL, sitemap, robots/noindex, structured-data, and future landing-page quality rules.
 
 Production SEO still requires final domain ownership, `NEXT_PUBLIC_SITE_URL` configuration, production sitemap/robots verification, and Search Console setup after the domain is connected.
+
+## M7 Analytics, Privacy, and Security Notes
+
+M7 adds Vercel Web Analytics instrumentation, a current-state privacy page, conservative security headers, and a production guard for the development-only admin route. See `docs/privacy-security.md` for data-flow and security details.
+
+The consolidated production blocker register now lives in `docs/production-blockers.md`.

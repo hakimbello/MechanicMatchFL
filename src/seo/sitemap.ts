@@ -22,6 +22,11 @@ export function buildPublicSitemapEntries(providers: Provider[] = DEVELOPMENT_PR
       changeFrequency: "monthly",
       priority: 0.5
     },
+    {
+      url: buildAbsoluteUrl("/privacy"),
+      changeFrequency: "monthly",
+      priority: 0.3
+    },
     ...getPublicProviderIds(providers).map((providerId) => ({
       url: buildAbsoluteUrl(`/mechanics/${encodeURIComponent(providerId)}`),
       changeFrequency: "monthly" as const,

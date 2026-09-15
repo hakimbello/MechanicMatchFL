@@ -31,6 +31,22 @@ body {
   line-height: 1.5;
 }
 
+.site-footer {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  padding: 0 16px 28px;
+}
+
+.site-footer a {
+  color: var(--accent-dark);
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.site-footer a:hover {
+  text-decoration: underline;
+}
+
 button,
 input,
 select {
@@ -532,6 +548,12 @@ textarea {
   max-width: 980px;
 }
 
+.privacy-page {
+  display: grid;
+  gap: 16px;
+  max-width: 900px;
+}
+
 .submission-form,
 .form-section {
   display: grid;
@@ -633,6 +655,10 @@ textarea {
 @media (min-width: 720px) {
   .page-shell {
     padding: 48px 24px 64px;
+  }
+
+  .site-footer {
+    padding: 0 24px 36px;
   }
 
   .search-hero {
