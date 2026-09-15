@@ -3,10 +3,11 @@ import {
   CUSTOMER_SERVICE_CATEGORIES,
   type CustomerServiceCategory,
   type MatchRequest,
-  type Provider,
-  type ProviderSpecialty
+  type Provider
 } from "../domain/providers.ts";
 import { DEVELOPMENT_PROVIDERS } from "../fixtures/developmentProviders.ts";
+import { buildProfileHref } from "../profiles/providerProfiles.ts";
+import { SERVICE_CATEGORY_LABELS, SPECIALTY_LABELS, PROVIDER_TYPE_LABELS } from "../presentation/providerText.ts";
 
 export interface SearchFormInput {
   year: string;
@@ -26,6 +27,7 @@ export interface SearchResultView {
   description?: string;
   verified: boolean;
   reasons: string[];
+  profileHref: string;
 }
 
 export const EMPTY_SEARCH_FORM: SearchFormInput = {
@@ -37,17 +39,17 @@ export const EMPTY_SEARCH_FORM: SearchFormInput = {
 };
 
 export const SERVICE_OPTIONS: { value: CustomerServiceCategory; label: string }[] = [
-  { value: "wont-start", label: "Won't Start" },
-  { value: "brakes", label: "Brakes" },
-  { value: "ac", label: "AC" },
-  { value: "tires", label: "Tires" },
-  { value: "engine", label: "Engine" },
-  { value: "transmission", label: "Transmission" },
-  { value: "electrical", label: "Electrical" },
-  { value: "suspension", label: "Suspension" },
-  { value: "maintenance", label: "Maintenance" },
-  { value: "check-engine-light", label: "Check Engine Light" },
-  { value: "other-not-sure", label: "Other / Not Sure" }
+  { value: "wont-start", label: SERVICE_CATEGORY_LABELS["wont-start"] },
+  { value: "brakes", label: SERVICE_CATEGORY_LABELS.brakes },
+  { value: "ac", label: SERVICE_CATEGORY_LABELS.ac },
+  { value: "tires", label: SERVICE_CATEGORY_LABELS.tires },
+  { value: "engine", label: SERVICE_CATEGORY_LABELS.engine },
+  { value: "transmission", label: SERVICE_CATEGORY_LABELS.transmission },
+  { value: "electrical", label: SERVICE_CATEGORY_LABELS.electrical },
+  { value: "suspension", label: SERVICE_CATEGORY_LABELS.suspension },
+  { value: "maintenance", label: SERVICE_CATEGORY_LABELS.maintenance },
+  { value: "check-engine-light", label: SERVICE_CATEGORY_LABELS["check-engine-light"] },
+  { value: "other-not-sure", label: SERVICE_CATEGORY_LABELS["other-not-sure"] }
 ];
 
 export const VEHICLE_MAKE_OPTIONS = ["Chevrolet", "Ford", "Honda", "Hyundai", "Kia", "Nissan", "Toyota"];
@@ -55,30 +57,6 @@ export const VEHICLE_MAKE_OPTIONS = ["Chevrolet", "Ford", "Honda", "Hyundai", "K
 export const VEHICLE_YEAR_OPTIONS = Array.from({ length: 31 }, (_, index) => String(new Date().getFullYear() + 1 - index));
 
 const LAUNCH_ZIPS = new Set(["33020", "33130", "33139", "33155", "33161", "33301", "33311", "33316"]);
-
-const PROVIDER_TYPE_LABELS: Record<Provider["type"], string> = {
-  "independent-auto-repair-shop": "Independent repair shop",
-  "mobile-mechanic": "Mobile mechanic",
-  "tire-service-shop": "Tire/service shop",
-  "repair-specialist": "Repair specialist"
-};
-
-const SPECIALTY_LABELS: Record<ProviderSpecialty, string> = {
-  "general-repair": "General repair",
-  engine: "Engine service",
-  transmission: "Transmission specialist",
-  brakes: "Brake service",
-  "tires-wheels": "Tires and wheels",
-  ac: "AC specialist",
-  "electrical-diagnostics": "Electrical diagnostics",
-  suspension: "Suspension service",
-  maintenance: "Maintenance",
-  "check-engine-diagnostics": "Check-engine diagnostics",
-  diesel: "Diesel service",
-  exhaust: "Exhaust service",
-  "cooling-radiator": "Cooling and radiator",
-  alignment: "Alignment"
-};
 
 export function runProviderSearch(
   input: SearchFormInput,
@@ -166,7 +144,12 @@ export function presentProviderMatch(match: ProviderMatch, request: MatchRequest
     locationLine,
     description: provider.description,
     verified: Boolean(provider.trust?.verified),
-    reasons: deriveCustomerReasons(match, request)
+    reasons: deriveCustomerReasons(match, request),
+    profileHref: buildProfileHref(provider.id, {
+      serviceCategory: request.serviceCategory,
+      make: request.vehicle.make,
+      zip: request.zip
+    })
   };
 }
 
@@ -175,7 +158,7 @@ export function deriveCustomerReasons(match: ProviderMatch, request: MatchReques
 
   for (const reason of match.reasons) {
     if (reason.startsWith("service:")) {
-      const service = reason.replace("service:", "") as ProviderSpecialty;
+      const service = reason.replace("service:", "") as keyof typeof SPECIALTY_LABELS;
       reasons.add(SPECIALTY_LABELS[service]);
     }
 

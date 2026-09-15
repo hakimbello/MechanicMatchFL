@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState, type FormEvent } from "react";
 
 import {
@@ -205,6 +206,9 @@ export function MechanicSearchExperience() {
                     ))}
                   </ul>
                   {result.description ? <p className="description">{result.description}</p> : null}
+                  <Link className="secondary-action" href={result.profileHref}>
+                    View Profile
+                  </Link>
                 </div>
               </article>
             ))}

@@ -40,6 +40,7 @@ select {
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
+a:focus-visible,
 .service-choice:has(input:focus-visible) {
   outline: 3px solid var(--focus);
   outline-offset: 3px;
@@ -207,6 +208,25 @@ select[aria-invalid="true"] {
   background: var(--accent-dark);
 }
 
+.secondary-action {
+  display: inline-flex;
+  min-height: 44px;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  margin-top: 14px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  color: var(--accent-dark);
+  padding: 9px 12px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.secondary-action:hover {
+  background: #eef6ff;
+}
+
 .results-section {
   display: grid;
   gap: 16px;
@@ -330,6 +350,164 @@ select[aria-invalid="true"] {
   background: #fff;
 }
 
+.profile-shell {
+  display: grid;
+  gap: 18px;
+}
+
+.back-link {
+  width: fit-content;
+  color: var(--accent-dark);
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.back-link:hover {
+  text-decoration: underline;
+}
+
+.profile-hero {
+  display: grid;
+  gap: 18px;
+  align-items: start;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 14px 40px rgb(20 33 61 / 10%);
+}
+
+.profile-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.profile-badges span {
+  border-radius: 999px;
+  background: #edf2f7;
+  color: #253449;
+  padding: 5px 9px;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.contact-panel {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 14px;
+}
+
+.contact-panel h2,
+.profile-card h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  line-height: 1.2;
+}
+
+.contact-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.contact-action {
+  display: grid;
+  gap: 2px;
+  min-height: 54px;
+  justify-content: center;
+  border: 1px solid #aeb8c8;
+  border-radius: 6px;
+  background: #fff;
+  color: var(--ink);
+  padding: 10px 12px;
+  text-align: center;
+  text-decoration: none;
+}
+
+.contact-action span:first-child {
+  font-weight: 900;
+}
+
+.contact-action span:last-child {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.primary-contact {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.primary-contact span:last-child {
+  color: #e9f4ff;
+}
+
+.profile-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.profile-card {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.profile-card p {
+  margin: 0;
+}
+
+.muted-text {
+  color: var(--muted);
+}
+
+.profile-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.profile-list li {
+  border-radius: 999px;
+  background: #edf2f7;
+  color: #253449;
+  padding: 5px 9px;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.detail-list {
+  display: grid;
+  grid-template-columns: minmax(100px, 0.4fr) minmax(0, 1fr);
+  gap: 8px 12px;
+  margin: 0;
+}
+
+.detail-list dt {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.detail-list dd {
+  margin: 0;
+  font-weight: 800;
+}
+
+.standalone-link {
+  margin-top: 8px;
+}
+
 @media (min-width: 720px) {
   .page-shell {
     padding: 48px 24px 64px;
@@ -355,5 +533,14 @@ select[aria-invalid="true"] {
   .result-title-row {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: start;
+  }
+
+  .profile-hero {
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 0.44fr);
+    padding: 24px;
+  }
+
+  .profile-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

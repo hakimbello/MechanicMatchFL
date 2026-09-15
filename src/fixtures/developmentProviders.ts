@@ -17,6 +17,11 @@ export const DEVELOPMENT_PROVIDERS: Provider[] = [
     services: ["ac", "electrical-diagnostics", "cooling-radiator"],
     allMakes: false,
     makesServiced: ["Honda", "Toyota", "Nissan"],
+    contact: {
+      phone: "(305) 555-0148",
+      email: "hello@bayfrontautoclimate.test",
+      website: "https://bayfrontautoclimate.example"
+    },
     description: "Fictional development provider focused on auto AC and electrical diagnostics.",
     trust: { verified: true, claimedProfile: true }
   },
@@ -31,6 +36,10 @@ export const DEVELOPMENT_PROVIDERS: Provider[] = [
     },
     services: ["ac", "maintenance"],
     allMakes: true,
+    contact: {
+      phone: "305-555-0199",
+      email: "dispatch@sunrisemobilewrench.test"
+    },
     description: "Fictional mobile mechanic serving selected Miami-Dade ZIP codes.",
     trust: { claimedProfile: true }
   },
@@ -50,6 +59,10 @@ export const DEVELOPMENT_PROVIDERS: Provider[] = [
     services: ["general-repair", "maintenance", "brakes"],
     allMakes: false,
     makesServiced: ["Honda", "Toyota", "Nissan"],
+    contact: {
+      phone: "305.555.0172",
+      website: "https://cypressgroveautocare.example"
+    },
     description: "Fictional independent shop for common repairs and maintenance."
   },
   {
@@ -69,6 +82,11 @@ export const DEVELOPMENT_PROVIDERS: Provider[] = [
     allMakes: false,
     makesServiced: ["Ford", "Chevrolet", "Honda"],
     specialtyMakes: ["Ford"],
+    contact: {
+      phone: "(954) 555-0133",
+      email: "service@riverwalktransmission.test",
+      website: "https://riverwalktransmission.example"
+    },
     description: "Fictional Broward transmission specialist with Ford truck experience.",
     trust: { verified: true }
   },
@@ -88,6 +106,10 @@ export const DEVELOPMENT_PROVIDERS: Provider[] = [
     services: ["general-repair", "maintenance", "brakes"],
     allMakes: false,
     makesServiced: ["Ford", "Chevrolet", "Honda", "Toyota"],
+    contact: {
+      phone: "(954) 555-0177",
+      website: "javascript:alert('not-safe')"
+    },
     description: "Fictional general repair shop serving central Broward."
   },
   {
@@ -105,6 +127,10 @@ export const DEVELOPMENT_PROVIDERS: Provider[] = [
     },
     services: ["tires-wheels", "alignment", "maintenance"],
     allMakes: true,
+    contact: {
+      phone: "954-555-0188",
+      website: "https://atlantictirealignment.example"
+    },
     description: "Fictional tire, wheel, and alignment service shop."
   },
   {

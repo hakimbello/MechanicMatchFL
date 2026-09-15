@@ -57,6 +57,15 @@ test("search request reaches the matching logic and returns provider results", (
   }
 });
 
+test("search results link to stable provider profile routes", () => {
+  const search = runProviderSearch(validAcSearch);
+
+  assert.equal(search.ok, true);
+  if (search.ok) {
+    assert.equal(search.results[0].profileHref, "/mechanics/dev-dade-ac-specialist?service=ac&make=Honda&zip=33161");
+  }
+});
+
 test("results preserve matching-engine order", () => {
   const search = runProviderSearch(validAcSearch);
 
