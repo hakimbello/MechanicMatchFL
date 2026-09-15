@@ -8,6 +8,11 @@ import {
   getPublicProviderById,
   getPublicProviderIds
 } from "../../../src/profiles/providerProfiles.ts";
+import {
+  buildMechanicProfileMetadata,
+  buildMechanicProfileNotFoundMetadata
+} from "../../../src/seo/metadata.ts";
+import { buildProviderStructuredData, serializeJsonLd } from "../../../src/seo/structuredData.ts";
 
 type MechanicProfilePageProps = {
   params: Promise<{ providerId: string }>;
@@ -27,15 +32,10 @@ export async function generateMetadata({ params }: MechanicProfilePageProps): Pr
   const provider = getPublicProviderById(providerId);
 
   if (!provider) {
-    return {
-      title: "Mechanic profile not found | MechanicMatchFL"
-    };
+    return buildMechanicProfileNotFoundMetadata();
   }
 
-  return {
-    title: `${provider.name} | MechanicMatchFL`,
-    description: provider.description
-  };
+  return buildMechanicProfileMetadata(provider);
 }
 
 export default async function MechanicProfilePage({ params, searchParams }: MechanicProfilePageProps) {
@@ -52,83 +52,90 @@ export default async function MechanicProfilePage({ params, searchParams }: Mech
     make: context.make,
     zip: context.zip
   });
+  const structuredData = buildProviderStructuredData(provider);
 
   return (
-    <main className="page-shell profile-shell">
-      <Link className="back-link" href="/">
-        Back to Search
-      </Link>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(structuredData) }}
+      />
+      <main className="page-shell profile-shell">
+        <Link className="back-link" href="/">
+          Back to Search
+        </Link>
 
-      <section className="profile-hero" aria-labelledby="profile-title">
-        <div>
-          <p className="eyebrow">{profile.providerType}</p>
-          <h1 id="profile-title">{profile.name}</h1>
-          <p className="intro">{profile.description}</p>
-          <div className="profile-badges" aria-label="Provider trust and location details">
-            <span>{profile.locationKind}</span>
-            {profile.verified ? <span>Verified profile</span> : null}
-            {profile.claimedProfile ? <span>Claimed profile</span> : null}
+        <section className="profile-hero" aria-labelledby="profile-title">
+          <div>
+            <p className="eyebrow">{profile.providerType}</p>
+            <h1 id="profile-title">{profile.name}</h1>
+            <p className="intro">{profile.description}</p>
+            <div className="profile-badges" aria-label="Provider trust and location details">
+              <span>{profile.locationKind}</span>
+              {profile.verified ? <span>Verified profile</span> : null}
+              {profile.claimedProfile ? <span>Claimed profile</span> : null}
+            </div>
           </div>
-        </div>
 
-        <ContactActions
-          actions={profile.contactActions}
-          eventContext={{
-            providerId: profile.id,
-            sourcePage: "profile",
-            serviceCategory: profile.matchContext?.serviceCategory
-          }}
-        />
-      </section>
-
-      {profile.matchContext ? (
-        <section className="profile-card" aria-labelledby="match-context-title">
-          <h2 id="match-context-title">Why this mechanic matched</h2>
-          <dl className="detail-list">
-            {profile.matchContext.serviceLine ? (
-              <>
-                <dt>Matched for</dt>
-                <dd>{profile.matchContext.serviceLine}</dd>
-              </>
-            ) : null}
-            {profile.matchContext.vehicleLine ? (
-              <>
-                <dt>Works on</dt>
-                <dd>{profile.matchContext.vehicleLine}</dd>
-              </>
-            ) : null}
-            {profile.matchContext.locationLine ? (
-              <>
-                <dt>Location</dt>
-                <dd>{profile.matchContext.locationLine}</dd>
-              </>
-            ) : null}
-          </dl>
+          <ContactActions
+            actions={profile.contactActions}
+            eventContext={{
+              providerId: profile.id,
+              sourcePage: "profile",
+              serviceCategory: profile.matchContext?.serviceCategory
+            }}
+          />
         </section>
-      ) : null}
 
-      <section className="profile-grid" aria-label="Provider details">
-        <div className="profile-card">
-          <h2>Location</h2>
-          <p>{profile.locationLine}</p>
-          {profile.serviceAreaLine ? <p className="muted-text">{profile.serviceAreaLine}</p> : null}
-        </div>
+        {profile.matchContext ? (
+          <section className="profile-card" aria-labelledby="match-context-title">
+            <h2 id="match-context-title">Why this mechanic matched</h2>
+            <dl className="detail-list">
+              {profile.matchContext.serviceLine ? (
+                <>
+                  <dt>Matched for</dt>
+                  <dd>{profile.matchContext.serviceLine}</dd>
+                </>
+              ) : null}
+              {profile.matchContext.vehicleLine ? (
+                <>
+                  <dt>Works on</dt>
+                  <dd>{profile.matchContext.vehicleLine}</dd>
+                </>
+              ) : null}
+              {profile.matchContext.locationLine ? (
+                <>
+                  <dt>Location</dt>
+                  <dd>{profile.matchContext.locationLine}</dd>
+                </>
+              ) : null}
+            </dl>
+          </section>
+        ) : null}
 
-        <div className="profile-card">
-          <h2>Services</h2>
-          <ul className="profile-list">
-            {profile.services.map((service) => (
-              <li key={service}>{service}</li>
-            ))}
-          </ul>
-        </div>
+        <section className="profile-grid" aria-label="Provider details">
+          <div className="profile-card">
+            <h2>Location</h2>
+            <p>{profile.locationLine}</p>
+            {profile.serviceAreaLine ? <p className="muted-text">{profile.serviceAreaLine}</p> : null}
+          </div>
 
-        <div className="profile-card">
-          <h2>Vehicles</h2>
-          <p>{profile.makesLine}</p>
-          {profile.specialtyMakesLine ? <p className="muted-text">{profile.specialtyMakesLine}</p> : null}
-        </div>
-      </section>
-    </main>
+          <div className="profile-card">
+            <h2>Services</h2>
+            <ul className="profile-list">
+              {profile.services.map((service) => (
+                <li key={service}>{service}</li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="profile-card">
+            <h2>Vehicles</h2>
+            <p>{profile.makesLine}</p>
+            {profile.specialtyMakesLine ? <p className="muted-text">{profile.specialtyMakesLine}</p> : null}
+          </div>
+        </section>
+      </main>
+    </>
   );
 }

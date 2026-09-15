@@ -20,3 +20,9 @@ Production requirements before launch:
 - preserve the lifecycle rules so draft/submitted/under-review/changes-requested/rejected/deactivated providers cannot become public accidentally.
 
 The `/admin/providers` route is development-only. It is intentionally not represented as production security.
+
+## M6 SEO Foundation Notes
+
+M6 adds a technical SEO foundation without creating mass landing pages. See `docs/seo-foundation.md` for canonical URL, sitemap, robots/noindex, structured-data, and future landing-page quality rules.
+
+Production SEO still requires final domain ownership, `NEXT_PUBLIC_SITE_URL` configuration, production sitemap/robots verification, and Search Console setup after the domain is connected.

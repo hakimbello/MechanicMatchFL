@@ -65,7 +65,7 @@ export function MechanicSearchExperience() {
           <h1 id="page-title">Find the right mechanic for your car.</h1>
           <p className="intro">
             MechanicMatchFL helps South Florida drivers find relevant local repair providers based on
-            vehicle, repair need, and ZIP code.
+            vehicle, repair need, and ZIP code, including independent shops, mobile mechanics, and specialists.
           </p>
           <Link className="provider-entry-link" href="/list-your-business">
             Are you a mechanic? List your business

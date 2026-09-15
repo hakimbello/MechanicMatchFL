@@ -13,6 +13,7 @@ import {
   formatServiceCategory,
   formatSpecialty
 } from "../presentation/providerText.ts";
+import { isPublicProvider } from "../submissions/publication.ts";
 
 export interface ProfileSearchContextInput {
   serviceCategory?: string;
@@ -45,11 +46,11 @@ export interface ProviderProfileView {
 }
 
 export function getPublicProviderById(id: string, providers: Provider[] = DEVELOPMENT_PROVIDERS): Provider | null {
-  return providers.find((provider) => provider.id === id && provider.status === "active") ?? null;
+  return providers.find((provider) => provider.id === id && isPublicProvider(provider)) ?? null;
 }
 
 export function getPublicProviderIds(providers: Provider[] = DEVELOPMENT_PROVIDERS): string[] {
-  return providers.filter((provider) => provider.status === "active").map((provider) => provider.id);
+  return providers.filter(isPublicProvider).map((provider) => provider.id);
 }
 
 export function buildProfileHref(

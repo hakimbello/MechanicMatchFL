@@ -1,9 +1,7 @@
 import { ProviderSubmissionForm } from "./provider-submission-form";
+import { listBusinessMetadata } from "../../src/seo/metadata.ts";
 
-export const metadata = {
-  title: "List your business | MechanicMatchFL",
-  description: "Submit a mechanic or automotive repair provider listing for review."
-};
+export const metadata = listBusinessMetadata;
 
 export default function ListYourBusinessPage() {
   return <ProviderSubmissionForm />;
