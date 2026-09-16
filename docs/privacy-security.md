@@ -4,7 +4,7 @@
 
 Customer search inputs currently include vehicle year, make, model, repair or service category, and ZIP code.
 
-- Search runs client-side against development provider data.
+- Search runs against active public provider data loaded through the runtime provider boundary.
 - Search inputs are not persisted in a production database.
 - Service, make, and ZIP may appear in mechanic profile URLs as search context so the page can explain why a provider matched.
 - Analytics events intentionally exclude raw ZIP, model, year, names, phone numbers, email addresses, VINs, free-form messages, and arbitrary query-string contents.
@@ -14,10 +14,10 @@ Customer search inputs currently include vehicle year, make, model, repair or se
 
 Provider submission inputs currently include business/provider name, phone, email, provider type, services, vehicle compatibility, physical address or mobile service area, description, optional Florida repair registration, authorization relationship, and authorization attestation.
 
-- M5 temporary provider submissions are stored in the submitting browser through `localStorage`, with an in-memory fallback when storage is unavailable.
-- This temporary development storage may include provider phone, email, street address, description, registration value, and authorization fields.
-- This is not production persistence.
-- Production requires durable server-side storage with appropriate access controls.
+- Production provider submissions flow through a Next.js server action and are written to Supabase provider records when Supabase environment variables are configured.
+- Development and tests may still use isolated in-memory storage so ordinary verification does not require live production secrets.
+- Stored provider records may include provider phone, email, street address, description, registration value, and authorization fields.
+- Public reads use the active-provider projection rather than the private provider-record base table.
 - Provider images are deferred from V1. The current UI does not collect image references, and validation rejects stale image-reference submissions.
 - Analytics for provider submissions intentionally includes only provider type and location kind.
 
@@ -46,11 +46,11 @@ Public active profiles may show intended business-facing provider information su
 
 Submission/admin-only data must not leak into public profiles merely because it exists in a submission record. Private fields include authorization relationship, authorization attestation, internal review status, and submitted-unverified registration values.
 
-## Development Admin Limitation
+## Admin Access
 
-`/admin/providers` remains a development-only review surface. It has prominent development-only text and `noindex,nofollow` metadata.
+`/admin/providers` is a protected admin review surface. Unauthenticated users are redirected to `/admin/login`; authenticated users must also be enabled in `public.admin_users` before private provider records or lifecycle actions are available.
 
-M7 adds a production guard that returns not-found for the development admin route when `NODE_ENV` is `production`. This is not a replacement for real admin authentication. Production admin authentication and authorization remain launch blockers.
+Admin authorization uses the immutable Supabase Auth user ID through the server-side `is_mechanicmatch_admin` RPC. It does not rely on email strings, localStorage, hidden routes, robots.txt, or `noindex`.
 
 ## Security Headers
 
@@ -75,7 +75,7 @@ Provider JSON-LD uses actual provider data only and is serialized with escaping 
 
 ## Environment Variables
 
-`NEXT_PUBLIC_SITE_URL` is public by design and must not contain secrets. No API keys, passwords, tokens, or private credentials are currently required for the app. Do not put secrets in `NEXT_PUBLIC_*` variables.
+`NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` are public by design and must not contain secrets. `SUPABASE_SECRET_KEY` is server-only and must never be placed in a `NEXT_PUBLIC_*` variable, source code, tests, fixtures, docs, URLs, analytics, or Git history.
 
 ## Remaining Launch Blockers
 

@@ -6,9 +6,11 @@ import { ContactActions } from "./contact-actions";
 import { ProfileAnalytics } from "./profile-analytics";
 import {
   buildProviderProfileView,
-  getPublicProviderById,
-  getPublicProviderIds
 } from "../../../src/profiles/providerProfiles.ts";
+import {
+  getRuntimePublicProviderById,
+  listRuntimePublicProviderIds
+} from "../../../src/providers/runtimeProviderPersistence.ts";
 import {
   buildMechanicProfileMetadata,
   buildMechanicProfileNotFoundMetadata
@@ -24,15 +26,16 @@ type MechanicProfilePageProps = {
   }>;
 };
 
-export const dynamicParams = false;
+export const dynamic = "force-dynamic";
 
-export function generateStaticParams() {
-  return getPublicProviderIds().map((providerId) => ({ providerId }));
+export async function generateStaticParams() {
+  const providerIds = await listRuntimePublicProviderIds();
+  return providerIds.map((providerId) => ({ providerId }));
 }
 
 export async function generateMetadata({ params }: MechanicProfilePageProps): Promise<Metadata> {
   const { providerId } = await params;
-  const provider = getPublicProviderById(providerId);
+  const provider = await getRuntimePublicProviderById(providerId);
 
   if (!provider) {
     return buildMechanicProfileNotFoundMetadata();
@@ -44,7 +47,7 @@ export async function generateMetadata({ params }: MechanicProfilePageProps): Pr
 export default async function MechanicProfilePage({ params, searchParams }: MechanicProfilePageProps) {
   const { providerId } = await params;
   const context = await searchParams;
-  const provider = getPublicProviderById(providerId);
+  const provider = await getRuntimePublicProviderById(providerId);
 
   if (!provider) {
     notFound();

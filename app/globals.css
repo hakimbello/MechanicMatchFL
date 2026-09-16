@@ -235,6 +235,12 @@ textarea {
   background: var(--accent-dark);
 }
 
+.primary-action:disabled,
+.secondary-action:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 .provider-entry-link {
   display: inline-flex;
   min-height: 44px;
@@ -599,6 +605,11 @@ textarea {
   gap: 8px;
   border-color: #a8d5bd;
   background: #f1fbf5;
+}
+
+.error-panel {
+  border-color: #f1aaa4;
+  background: #fff5f5;
 }
 
 .confirmation-panel p {

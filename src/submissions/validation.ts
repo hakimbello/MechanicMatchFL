@@ -19,6 +19,8 @@ export function validateProviderSubmission(input: ProviderSubmissionInput): Subm
 
   if (!input.businessName.trim()) {
     errors.businessName = "Enter the provider or business name.";
+  } else if (input.businessName.trim().length > 120) {
+    errors.businessName = "Keep the provider or business name under 120 characters.";
   }
 
   if (!isValidPhone(input.phone)) {
@@ -27,6 +29,8 @@ export function validateProviderSubmission(input: ProviderSubmissionInput): Subm
 
   if (!isValidEmail(input.email)) {
     errors.email = "Enter a valid email address.";
+  } else if (input.email.trim().length > 254) {
+    errors.email = "Keep the email address under 254 characters.";
   }
 
   if (!isProviderType(input.providerType)) {
@@ -39,15 +43,25 @@ export function validateProviderSubmission(input: ProviderSubmissionInput): Subm
 
   if (!input.allMakes && splitCommaValues(input.makesServiced).length === 0) {
     errors.makesServiced = "Choose all makes or enter the makes you service.";
+  } else if (input.makesServiced.length > 300) {
+    errors.makesServiced = "Keep makes serviced under 300 characters.";
+  }
+
+  if (input.specialtyMakes.length > 300) {
+    errors.specialtyMakes = "Keep specialty makes under 300 characters.";
   }
 
   if (input.locationKind === "physical") {
     if (!input.street.trim()) {
       errors.street = "Enter the shop street address.";
+    } else if (input.street.trim().length > 160) {
+      errors.street = "Keep the shop street address under 160 characters.";
     }
 
     if (!input.city.trim()) {
       errors.city = "Enter the shop city.";
+    } else if (input.city.trim().length > 80) {
+      errors.city = "Keep the shop city under 80 characters.";
     }
 
     if (!isLaunchCounty(input.county)) {

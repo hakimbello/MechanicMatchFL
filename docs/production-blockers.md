@@ -1,18 +1,20 @@
 # MechanicMatchFL Production Blocker Register
 
-This register consolidates known launch blockers from M2-M7. Do not mark an item resolved unless the implementation actually resolves it.
+This register consolidates known launch blockers. Do not mark an item resolved unless the implementation and required owner-side verification actually resolve it.
 
 ## Data and Geography
 
 - Verify the M10 Miami-Dade/Broward ZIP source set during the first production deployment. Search ZIP eligibility now covers the documented two-county launch area, but only the original trusted centroid set is used for distance labels.
-- Add durable server-side provider persistence.
+- Verify live Supabase provider submission writes after environment variables are configured.
+- Verify live active public-provider reads against `public.active_public_providers`.
 - Provider images are deferred from V1; do not reintroduce image submission until production storage, moderation, and validation are defined.
+- Decide whether accountless provider submission requires production rate limiting before launch.
 
 ## Admin and Provider Operations
 
-- Add real server-side admin authentication and authorization.
-- Replace the development-only `/admin/providers` workflow with a production-safe admin review surface.
-- Replace development fixture provider listings with durable production provider data before public launch.
+- Verify live Supabase admin login, session refresh, allow-list authorization, sign-out, and durable lifecycle mutations.
+- Configure required Supabase environment variables outside the repository.
+- Ensure production has real active provider records before expecting public search results.
 - Preserve provider lifecycle/publication safety so non-active providers cannot become public accidentally.
 
 ## Domain and SEO

@@ -35,3 +35,9 @@ These sources close the previous limited-launch-ZIP code blocker, but they do no
 6. Decide whether a real privacy contact mechanism is required before public launch.
 
 After those decisions and credentials exist, the next implementation should wire provider submission persistence, production provider reads, and authenticated admin review to the chosen services.
+
+## Post-M10 Phase 1B Update
+
+Production Infrastructure Phase 1B wires the code path for Supabase-backed provider submissions, active public-provider reads, admin login, allow-list authorization, and durable lifecycle mutations on the `production-supabase-persistence` branch.
+
+The app still is not production-launch ready until the required environment variables are configured outside the repository and live integration behavior is explicitly verified. See `docs/supabase-production-setup.md` and `docs/production-blockers.md` for the current state.

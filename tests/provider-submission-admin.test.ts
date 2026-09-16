@@ -2,11 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type { ProviderStatus } from "../src/domain/providers.ts";
-import { getDevelopmentAdminAccess } from "../src/submissions/adminAccess.ts";
+import { InMemoryProviderPersistence } from "../src/providers/providerPersistence.ts";
 import { buildAdminReviewView } from "../src/submissions/adminReview.ts";
 import { canTransitionProviderStatus, transitionProviderSubmission } from "../src/submissions/lifecycle.ts";
 import { convertSubmissionToProvider, isPublicProvider } from "../src/submissions/publication.ts";
-import { InMemoryProviderSubmissionRepository } from "../src/submissions/repository.ts";
 import type { ProviderSubmissionInput, ProviderSubmissionRecord } from "../src/submissions/submissionTypes.ts";
 import {
   EMPTY_PROVIDER_SUBMISSION,
@@ -243,19 +242,11 @@ test("provider images are deferred from V1 submissions", () => {
   assert.equal(errors.profileImageRef, "Provider images are deferred for V1.");
 });
 
-test("temporary admin authorization boundary is clearly development-only", () => {
-  const access = getDevelopmentAdminAccess();
-
-  assert.equal(access.allowed, true);
-  assert.equal(access.mode, "development-only");
-  assert.match(access.message, /production admin access control is not implemented/);
-});
-
-test("repository can save and transition submitted records", () => {
-  const repository = new InMemoryProviderSubmissionRepository();
+test("test persistence can save and transition submitted records without browser storage", async () => {
+  const repository = new InMemoryProviderPersistence();
   const record = submittedRecord(validMobileSubmission);
 
-  repository.save(record);
-  assert.equal(repository.list().length, 1);
-  assert.equal(repository.updateStatus(record.id, "under-review").status, "under-review");
+  await repository.createProviderSubmission(record);
+  assert.equal((await repository.listProviderSubmissionsForAdmin({ userId: "test-admin" })).length, 1);
+  assert.equal((await repository.transitionProviderStatus(record.id, "under-review", { userId: "test-admin" })).status, "under-review");
 });

@@ -15,7 +15,6 @@ import {
   type ProviderSpecialty
 } from "../../src/domain/providers.ts";
 import { formatProviderType, formatSpecialty } from "../../src/presentation/providerText.ts";
-import { BrowserProviderSubmissionRepository } from "../../src/submissions/repository.ts";
 import {
   AUTHORIZATION_RELATIONSHIPS,
   EMPTY_PROVIDER_SUBMISSION,
@@ -23,7 +22,7 @@ import {
   type ProviderSubmissionInput,
   type SubmissionFieldErrors
 } from "../../src/submissions/submissionTypes.ts";
-import { createSubmittedProviderRecord } from "../../src/submissions/validation.ts";
+import { submitProviderAction } from "./actions";
 
 const RELATIONSHIP_LABELS: Record<AuthorizationRelationship, string> = {
   myself: "Myself",
@@ -35,8 +34,10 @@ const RELATIONSHIP_LABELS: Record<AuthorizationRelationship, string> = {
 export function ProviderSubmissionForm() {
   const [form, setForm] = useState<ProviderSubmissionInput>(EMPTY_PROVIDER_SUBMISSION);
   const [errors, setErrors] = useState<SubmissionFieldErrors>({});
+  const [formError, setFormError] = useState<string | null>(null);
   const [submittedName, setSubmittedName] = useState<string | null>(null);
   const [hasStartedSubmission, setHasStartedSubmission] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   function markSubmissionStarted() {
     setHasStartedSubmission((current) => {
@@ -56,6 +57,7 @@ export function ProviderSubmissionForm() {
       delete next[field];
       return next;
     });
+    setFormError(null);
   }
 
   function toggleService(service: ProviderSpecialty) {
@@ -71,6 +73,7 @@ export function ProviderSubmissionForm() {
       delete next.services;
       return next;
     });
+    setFormError(null);
   }
 
   function toggleServiceCounty(county: LaunchCounty) {
@@ -83,24 +86,27 @@ export function ProviderSubmissionForm() {
     });
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const result = createSubmittedProviderRecord(form);
+    setIsSubmitting(true);
+    const result = await submitProviderAction(form);
+    setIsSubmitting(false);
 
     if (!result.ok) {
-      setErrors(result.errors);
+      setErrors(result.errors ?? {});
+      setFormError(result.formError ?? null);
       setSubmittedName(null);
       return;
     }
 
-    new BrowserProviderSubmissionRepository().save(result.record);
-    setSubmittedName(result.record.businessName);
+    setSubmittedName(result.businessName);
     setErrors({});
+    setFormError(null);
     setForm(EMPTY_PROVIDER_SUBMISSION);
     setHasStartedSubmission(false);
     recordProviderSubmissionCompleted({
-      providerType: result.record.providerType,
-      locationKind: result.record.locationKind
+      providerType: result.providerType,
+      locationKind: result.locationKind
     });
   }
 
@@ -129,6 +135,13 @@ export function ProviderSubmissionForm() {
           <Link className="secondary-action standalone-link" href="/">
             Back to Search
           </Link>
+        </section>
+      ) : null}
+
+      {formError ? (
+        <section className="confirmation-panel error-panel" role="alert">
+          <h2>Submission could not be saved.</h2>
+          <p>{formError}</p>
         </section>
       ) : null}
 
@@ -338,8 +351,8 @@ export function ProviderSubmissionForm() {
           <FieldError id="authorization-attested-error" message={errors.authorizationAttested} />
         </section>
 
-        <button className="primary-action" type="submit">
-          Submit for Review
+        <button className="primary-action" disabled={isSubmitting} type="submit">
+          {isSubmitting ? "Submitting..." : "Submit for Review"}
         </button>
       </form>
     </main>

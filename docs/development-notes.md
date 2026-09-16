@@ -12,16 +12,16 @@ Post-launch geography work should replace the static ZIP source with an approved
 
 M5 uses a development-only provider submission repository backed by browser `localStorage` in the UI and an in-memory repository in tests. This proves the submission, lifecycle, admin review, and publication-safety rules without introducing a production database during this milestone.
 
-Production requirements before launch:
+Phase 1B replaces the production path with Supabase-backed server persistence and protected admin review. The remaining non-production repositories exist only for tests or local fallback behavior when live Supabase environment variables are absent.
 
-- replace the browser/local in-memory repository with durable server-side persistence;
-- connect admin access to real authentication and authorization;
+Remaining production requirements before launch:
+
+- configure Supabase environment variables in the target runtime;
+- live-verify provider submission writes, public active-provider reads, admin login, allow-list authorization, sign-out, and lifecycle mutations;
 - keep provider images deferred unless production image storage, moderation, and validation are explicitly added;
 - preserve the lifecycle rules so draft/submitted/under-review/changes-requested/rejected/deactivated providers cannot become public accidentally.
 
-The `/admin/providers` route is development-only. It is intentionally not represented as production security.
-
-M10 also prevents development fixture provider data from becoming the default provider source in `NODE_ENV=production`. Production should show no fictional provider listings until durable production records are connected.
+The `/admin/providers` route is now an authenticated and allow-listed admin route. M10 still prevents development fixture provider data from becoming the default provider source in `NODE_ENV=production`.
 
 ## M6 SEO Foundation Notes
 

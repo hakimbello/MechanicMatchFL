@@ -15,7 +15,6 @@ import { buildContactActions, buildEmailAction, buildPhoneAction, buildWebsiteAc
 import { buildProviderProfileView, getPublicProviderById } from "../src/profiles/providerProfiles.ts";
 import { adminProvidersMetadata } from "../src/seo/metadata.ts";
 import { buildProviderStructuredData, serializeJsonLd } from "../src/seo/structuredData.ts";
-import { isDevelopmentAdminRouteAvailable } from "../src/security/adminGuard.ts";
 import { SECURITY_HEADERS } from "../src/security/headers.ts";
 import { canTransitionProviderStatus, transitionProviderSubmission } from "../src/submissions/lifecycle.ts";
 import { convertSubmissionToProvider } from "../src/submissions/publication.ts";
@@ -315,9 +314,12 @@ test("admin route retains noindex protection", () => {
   });
 });
 
-test("production admin guard disables development admin route", () => {
-  assert.equal(isDevelopmentAdminRouteAvailable({ NODE_ENV: "production" }), false);
-  assert.equal(isDevelopmentAdminRouteAvailable({ NODE_ENV: "development" }), true);
+test("admin route no longer depends on the development-only production guard", () => {
+  const adminPage = readFileSync("app/admin/providers/page.tsx", "utf8");
+
+  assert.match(adminPage, /getAdminAuthorization/);
+  assert.equal(adminPage.includes("isDevelopmentAdminRouteAvailable"), false);
+  assert.equal(adminPage.includes("notFound"), false);
 });
 
 test("security headers configuration behaves as expected", () => {

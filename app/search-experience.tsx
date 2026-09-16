@@ -8,6 +8,9 @@ import {
   recordMechanicSearchSubmitted
 } from "../src/analytics/client.ts";
 import {
+  type Provider
+} from "../src/domain/providers.ts";
+import {
   EMPTY_SEARCH_FORM,
   SERVICE_OPTIONS,
   VEHICLE_MAKE_OPTIONS,
@@ -26,7 +29,7 @@ const FIELD_IDS = {
   zip: "customer-zip"
 } as const;
 
-export function MechanicSearchExperience() {
+export function MechanicSearchExperience({ providers }: { providers: Provider[] }) {
   const [form, setForm] = useState<SearchFormInput>(EMPTY_SEARCH_FORM);
   const [errors, setErrors] = useState<SearchFieldErrors>({});
   const [results, setResults] = useState<SearchResultView[] | null>(null);
@@ -48,7 +51,7 @@ export function MechanicSearchExperience() {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const search = runProviderSearch(form);
+    const search = runProviderSearch(form, providers);
 
     setHasSearched(true);
     if (!search.ok) {

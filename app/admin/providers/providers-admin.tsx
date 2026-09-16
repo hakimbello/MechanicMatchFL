@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useState, useTransition } from "react";
 
 import type { ProviderStatus } from "../../../src/domain/providers.ts";
-import { getDevelopmentAdminAccess } from "../../../src/submissions/adminAccess.ts";
 import { buildAdminReviewView } from "../../../src/submissions/adminReview.ts";
 import { canTransitionProviderStatus } from "../../../src/submissions/lifecycle.ts";
-import { BrowserProviderSubmissionRepository } from "../../../src/submissions/repository.ts";
 import type { ProviderSubmissionRecord } from "../../../src/submissions/submissionTypes.ts";
+import type { AdminTransitionActionResult } from "./actions";
 
 const REVIEW_ACTIONS: { status: ProviderStatus; label: string }[] = [
   { status: "under-review", label: "Move to Under Review" },
@@ -19,33 +18,38 @@ const REVIEW_ACTIONS: { status: ProviderStatus; label: string }[] = [
   { status: "deactivated", label: "Deactivate" }
 ];
 
-export function AdminProvidersReview() {
-  const [records, setRecords] = useState<ProviderSubmissionRecord[]>([]);
+export function AdminProvidersReview({
+  initialRecords,
+  onSignOut,
+  onTransitionProvider
+}: {
+  initialRecords: ProviderSubmissionRecord[];
+  onSignOut: () => Promise<void>;
+  onTransitionProvider: (id: string, status: ProviderStatus) => Promise<AdminTransitionActionResult>;
+}) {
+  const [records, setRecords] = useState<ProviderSubmissionRecord[]>(initialRecords);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const access = getDevelopmentAdminAccess();
-  const repository = useMemo(() => new BrowserProviderSubmissionRepository(), []);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
   const selectedRecord = records.find((record) => record.id === selectedId) ?? records[0] ?? null;
   const review = selectedRecord ? buildAdminReviewView(selectedRecord) : null;
-
-  useEffect(() => {
-    const nextRecords = repository.list();
-    setRecords(nextRecords);
-    setSelectedId(nextRecords[0]?.id ?? null);
-  }, [repository]);
-
-  function refresh(nextSelectedId?: string) {
-    const nextRecords = repository.list();
-    setRecords(nextRecords);
-    setSelectedId(nextSelectedId ?? nextRecords[0]?.id ?? null);
-  }
 
   function updateStatus(status: ProviderStatus) {
     if (!selectedRecord) {
       return;
     }
 
-    const updated = repository.updateStatus(selectedRecord.id, status);
-    refresh(updated.id);
+    setActionError(null);
+    startTransition(async () => {
+      const result = await onTransitionProvider(selectedRecord.id, status);
+      if (!result.ok) {
+        setActionError(result.error);
+        return;
+      }
+
+      setRecords(result.records);
+      setSelectedId(selectedRecord.id);
+    });
   }
 
   return (
@@ -55,15 +59,20 @@ export function AdminProvidersReview() {
       </Link>
 
       <section className="profile-card">
-        <p className="eyebrow">Development admin</p>
+        <p className="eyebrow">Admin</p>
         <h1>Provider review</h1>
-        <p className="intro">{access.message}</p>
+        <p className="intro">Review submitted providers and perform approved lifecycle transitions.</p>
+        <form action={onSignOut}>
+          <button className="secondary-action" type="submit">
+            Sign Out
+          </button>
+        </form>
       </section>
 
       <section className="admin-layout">
         <div className="profile-card">
           <h2>Submitted providers</h2>
-          {records.length === 0 ? <p className="muted-text">No provider submissions are stored in this browser yet.</p> : null}
+          {records.length === 0 ? <p className="muted-text">No provider submissions are awaiting review.</p> : null}
           <div className="admin-list">
             {records.map((record) => (
               <button
@@ -83,6 +92,11 @@ export function AdminProvidersReview() {
           {review ? (
             <>
               <h2>{review.businessName}</h2>
+              {actionError ? (
+                <p className="field-error" role="alert">
+                  {actionError}
+                </p>
+              ) : null}
               <dl className="detail-list admin-detail-list">
                 <dt>Status</dt>
                 <dd>{review.status}</dd>
@@ -112,7 +126,7 @@ export function AdminProvidersReview() {
                 {REVIEW_ACTIONS.map((action) => (
                   <button
                     className="secondary-action admin-action-button"
-                    disabled={!canTransitionProviderStatus(review.status, action.status)}
+                    disabled={isPending || !canTransitionProviderStatus(review.status, action.status)}
                     key={action.status}
                     onClick={() => updateStatus(action.status)}
                     type="button"

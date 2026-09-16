@@ -1,4 +1,6 @@
 import type { Provider, ProviderStatus } from "../domain/providers.ts";
+import { canTransitionProviderStatus } from "../submissions/lifecycle.ts";
+import { convertSubmissionToProvider } from "../submissions/publication.ts";
 import type { ProviderSubmissionRecord, SubmittedRegistration } from "../submissions/submissionTypes.ts";
 
 export interface ProviderAdminIdentity {
@@ -16,6 +18,13 @@ export interface ProviderPersistence {
   ): Promise<ProviderSubmissionRecord>;
   listActivePublicProviders(): Promise<Provider[]>;
   getActivePublicProviderById(id: string): Promise<Provider | null>;
+}
+
+export class ProviderPersistenceError extends Error {
+  constructor(message = "Provider persistence operation failed.") {
+    super(message);
+    this.name = "ProviderPersistenceError";
+  }
 }
 
 export interface ProviderRecordRow {
@@ -239,4 +248,53 @@ export function mapPublicProviderRowToProvider(row: PublicProviderRow): Provider
       verifiedAt: row.verified_at ?? undefined
     }
   };
+}
+
+export class InMemoryProviderPersistence implements ProviderPersistence {
+  private records: ProviderSubmissionRecord[];
+
+  constructor(initialRecords: ProviderSubmissionRecord[] = []) {
+    this.records = [...initialRecords];
+  }
+
+  async createProviderSubmission(record: ProviderSubmissionRecord): Promise<ProviderSubmissionRecord> {
+    this.records = [record, ...this.records.filter((existing) => existing.id !== record.id)];
+    return record;
+  }
+
+  async listProviderSubmissionsForAdmin(_admin: ProviderAdminIdentity): Promise<ProviderSubmissionRecord[]> {
+    return [...this.records];
+  }
+
+  async getProviderSubmissionForAdmin(id: string, _admin: ProviderAdminIdentity): Promise<ProviderSubmissionRecord | null> {
+    return this.records.find((record) => record.id === id) ?? null;
+  }
+
+  async transitionProviderStatus(
+    id: string,
+    status: ProviderStatus,
+    admin: ProviderAdminIdentity
+  ): Promise<ProviderSubmissionRecord> {
+    const current = await this.getProviderSubmissionForAdmin(id, admin);
+    if (!current) {
+      throw new ProviderPersistenceError("Provider submission was not found.");
+    }
+
+    if (!canTransitionProviderStatus(current.status, status)) {
+      throw new ProviderPersistenceError("Provider status transition is not allowed.");
+    }
+
+    const updated = { ...current, status, updatedAt: new Date().toISOString() };
+    this.records = [updated, ...this.records.filter((existing) => existing.id !== id)];
+    return updated;
+  }
+
+  async listActivePublicProviders(): Promise<Provider[]> {
+    return this.records.map(convertSubmissionToProvider).filter((provider): provider is Provider => Boolean(provider));
+  }
+
+  async getActivePublicProviderById(id: string): Promise<Provider | null> {
+    const providers = await this.listActivePublicProviders();
+    return providers.find((provider) => provider.id === id) ?? null;
+  }
 }
