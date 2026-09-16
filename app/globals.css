@@ -32,12 +32,16 @@ body {
 }
 
 .site-footer {
-  width: min(1120px, 100%);
+  width: 100%;
+  max-width: 1120px;
   margin: 0 auto;
   padding: 0 16px 28px;
 }
 
 .site-footer a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
   color: var(--accent-dark);
   font-weight: 900;
   text-decoration: none;
@@ -63,7 +67,8 @@ a:focus-visible,
 }
 
 .page-shell {
-  width: min(1120px, 100%);
+  width: 100%;
+  max-width: 1120px;
   margin: 0 auto;
   padding: 24px 16px 40px;
 }
@@ -392,6 +397,9 @@ textarea {
 }
 
 .back-link {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
   width: fit-content;
   color: var(--accent-dark);
   font-weight: 900;
@@ -468,6 +476,11 @@ textarea {
   font-weight: 900;
 }
 
+.contact-action span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .contact-action span:last-child {
   color: var(--muted);
   font-size: 0.88rem;
@@ -538,6 +551,8 @@ textarea {
 .detail-list dd {
   margin: 0;
   font-weight: 800;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .standalone-link {
@@ -650,6 +665,18 @@ textarea {
   border-color: var(--line);
   color: #8a94a5;
   cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+  .detail-list,
+  .admin-detail-list {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .detail-list dt {
+    margin-top: 6px;
+  }
 }
 
 @media (min-width: 720px) {
