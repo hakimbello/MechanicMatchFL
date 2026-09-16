@@ -4,7 +4,12 @@ import test from "node:test";
 
 import { transitionProviderAsAdmin } from "../src/admin/adminLifecycleService.ts";
 import type { Provider, ProviderStatus } from "../src/domain/providers.ts";
-import { InMemoryProviderPersistence, ProviderPersistenceError, type ProviderAdminIdentity, type ProviderPersistence } from "../src/providers/providerPersistence.ts";
+import {
+  InMemoryProviderPersistence,
+  ProviderPersistenceError,
+  type ProviderAdminIdentity,
+  type ProviderPersistence
+} from "../src/providers/providerPersistence.ts";
 import { submitProviderSubmission } from "../src/submissions/providerSubmissionService.ts";
 import { transitionProviderSubmission } from "../src/submissions/lifecycle.ts";
 import { EMPTY_PROVIDER_SUBMISSION, type ProviderSubmissionInput, type ProviderSubmissionRecord } from "../src/submissions/submissionTypes.ts";
@@ -224,6 +229,34 @@ test("public sitemap and profile routes read runtime active provider data", () =
 
   assert.match(sitemap, /listRuntimePublicProviders/);
   assert.match(profilePage, /getRuntimePublicProviderById/);
-  assert.match(profilePage, /listRuntimePublicProviderIds/);
+  assert.doesNotMatch(profilePage, /generateStaticParams/);
+  assert.doesNotMatch(profilePage, /listRuntimePublicProviderIds/);
   assert.match(proxy, /updateSupabaseSession/);
+});
+
+test("provider profile route stays dynamic without build-time provider enumeration", () => {
+  const profilePage = readFileSync("app/mechanics/[providerId]/page.tsx", "utf8");
+
+  assert.match(profilePage, /export const dynamic = "force-dynamic"/);
+  assert.doesNotMatch(profilePage, /generateStaticParams/);
+  assert.doesNotMatch(profilePage, /listRuntimePublicProviderIds/);
+});
+
+test("runtime provider profile lookup uses active-public persistence without swallowing failures", () => {
+  const runtimePersistence = readFileSync("src/providers/runtimeProviderPersistence.ts", "utf8");
+
+  assert.match(runtimePersistence, /getActivePublicProviderById\(id\)/);
+  assert.doesNotMatch(runtimePersistence, /catch\s*\(/);
+  assert.doesNotMatch(runtimePersistence, /catch\s*\{/);
+});
+
+test("Supabase public provider lookup keeps not-found distinct from persistence failure", () => {
+  const supabasePersistence = readFileSync("src/providers/supabaseProviderPersistence.ts", "utf8");
+
+  assert.match(supabasePersistence, /async getActivePublicProviderById\(id: string\)/);
+  assert.match(supabasePersistence, /\.from\("active_public_providers"\)/);
+  assert.match(supabasePersistence, /\.maybeSingle\(\)/);
+  assert.match(supabasePersistence, /if \(error\) \{\s*throw new ProviderPersistenceError\(\);\s*\}/s);
+  assert.match(supabasePersistence, /return data \? mapPublicProviderRowToProvider/);
+  assert.match(supabasePersistence, /: null;/);
 });

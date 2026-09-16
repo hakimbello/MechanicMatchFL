@@ -8,8 +8,7 @@ import {
   buildProviderProfileView,
 } from "../../../src/profiles/providerProfiles.ts";
 import {
-  getRuntimePublicProviderById,
-  listRuntimePublicProviderIds
+  getRuntimePublicProviderById
 } from "../../../src/providers/runtimeProviderPersistence.ts";
 import {
   buildMechanicProfileMetadata,
@@ -27,11 +26,6 @@ type MechanicProfilePageProps = {
 };
 
 export const dynamic = "force-dynamic";
-
-export async function generateStaticParams() {
-  const providerIds = await listRuntimePublicProviderIds();
-  return providerIds.map((providerId) => ({ providerId }));
-}
 
 export async function generateMetadata({ params }: MechanicProfilePageProps): Promise<Metadata> {
   const { providerId } = await params;

@@ -1,6 +1,9 @@
 import "server-only";
 
-import { MissingSupabaseConfigurationError } from "../config/supabaseEnvironment.ts";
+import {
+  MissingSupabaseConfigurationError,
+  SUPABASE_CLIENT_SAFE_ENV_VARS
+} from "../config/supabaseEnvironment.ts";
 import { DEVELOPMENT_PROVIDERS } from "../fixtures/developmentProviders.ts";
 import { createSupabasePrivilegedDataClient, createSupabasePublicDataClient, isSupabaseAuthConfigured, isSupabasePrivilegedDataConfigured } from "../supabase/serverClient.ts";
 import { InMemoryProviderPersistence, type ProviderPersistence } from "./providerPersistence.ts";
@@ -33,6 +36,14 @@ export async function listRuntimePublicProviders(env: Pick<NodeJS.ProcessEnv, "N
 }
 
 export async function getRuntimePublicProviderById(id: string, env: Pick<NodeJS.ProcessEnv, "NODE_ENV"> = process.env) {
+  if (env.NODE_ENV === "production") {
+    if (!isSupabaseAuthConfigured()) {
+      throw new MissingSupabaseConfigurationError([...SUPABASE_CLIENT_SAFE_ENV_VARS]);
+    }
+
+    return new SupabaseProviderPersistence(createSupabasePublicDataClient()).getActivePublicProviderById(id);
+  }
+
   const providers = await listRuntimePublicProviders(env);
   return providers.find((provider) => provider.id === id && provider.status === "active") ?? null;
 }
