@@ -196,6 +196,10 @@ test("under-review provider is excluded from public search/provider conversion",
   assert.equal(convertSubmissionToProvider(move(submittedRecord(), ["under-review"])), null);
 });
 
+test("approved provider is not public until explicitly activated", () => {
+  assert.equal(convertSubmissionToProvider(move(submittedRecord(), ["under-review", "approved"])), null);
+});
+
 test("rejected provider is excluded from public search/provider conversion", () => {
   assert.equal(convertSubmissionToProvider(move(submittedRecord(), ["under-review", "rejected"])), null);
 });

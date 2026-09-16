@@ -38,6 +38,12 @@ test("validates ZIP format and launch geography", () => {
   assert.equal(validateSearchInput({ ...validAcSearch, zip: "90210" }).zip, "Enter a Miami-Dade or Broward ZIP code.");
 });
 
+test("documents temporary hard-coded launch ZIP limitation", () => {
+  for (const zip of ["33101", "33012", "33304", "33064"]) {
+    assert.equal(validateSearchInput({ ...validAcSearch, zip }).zip, "Enter a Miami-Dade or Broward ZIP code.");
+  }
+});
+
 test("maps repair category selections into match requests", () => {
   const request = buildSearchRequest({ ...validAcSearch, serviceCategory: "check-engine-light" });
 

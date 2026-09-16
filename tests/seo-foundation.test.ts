@@ -166,12 +166,16 @@ test("structured-data serialization safely handles script-like provider content"
   const serialized = serializeJsonLd(
     buildProviderStructuredData({
       ...provider,
-      description: "</script><script>alert('seo')</script>"
+      description: "</script><script>alert('seo')</script><>&\u2028\u2029"
     })
   );
 
   assert.equal(serialized.includes("</script"), false);
   assert.ok(serialized.includes("\\u003c/script"));
+  assert.ok(serialized.includes("\\u003e"));
+  assert.ok(serialized.includes("\\u0026"));
+  assert.ok(serialized.includes("\\u2028"));
+  assert.ok(serialized.includes("\\u2029"));
 });
 
 test("unknown provider continues to use proper not-found behavior", () => {
