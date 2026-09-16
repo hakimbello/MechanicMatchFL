@@ -1,24 +1,14 @@
 import {
   type Coordinates,
   type CustomerServiceCategory,
-  LAUNCH_COUNTIES,
+  type LaunchCounty,
   type MatchRequest,
   type Provider,
   type ProviderSpecialty
 } from "./providers.ts";
+import { getLaunchZipInfo } from "../geography/launchGeography.ts";
 
 const ACTIVE_MATCH_STATUS = "active";
-
-const ZIP_CENTROIDS: Record<string, { county: string; coordinates: Coordinates }> = {
-  "33130": { county: "Miami-Dade", coordinates: { latitude: 25.768, longitude: -80.201 } },
-  "33139": { county: "Miami-Dade", coordinates: { latitude: 25.782, longitude: -80.134 } },
-  "33155": { county: "Miami-Dade", coordinates: { latitude: 25.737, longitude: -80.315 } },
-  "33161": { county: "Miami-Dade", coordinates: { latitude: 25.893, longitude: -80.182 } },
-  "33020": { county: "Broward", coordinates: { latitude: 26.011, longitude: -80.149 } },
-  "33301": { county: "Broward", coordinates: { latitude: 26.123, longitude: -80.143 } },
-  "33311": { county: "Broward", coordinates: { latitude: 26.145, longitude: -80.174 } },
-  "33316": { county: "Broward", coordinates: { latitude: 26.102, longitude: -80.136 } }
-};
 
 const SERVICE_RELEVANCE: Record<CustomerServiceCategory, Partial<Record<ProviderSpecialty, number>>> = {
   "wont-start": {
@@ -190,23 +180,24 @@ function scoreGeography(
   provider: Provider
 ): { eligible: boolean; score: number; distanceMiles?: number; reasons: string[] } {
   const requestZip = normalizeZip(request.zip);
-  const requestCoordinates = request.coordinates ?? ZIP_CENTROIDS[requestZip]?.coordinates;
-  const requestCounty = ZIP_CENTROIDS[requestZip]?.county;
+  const requestZipInfo = getLaunchZipInfo(requestZip);
 
-  if (requestCounty && !LAUNCH_COUNTIES.includes(requestCounty as (typeof LAUNCH_COUNTIES)[number])) {
+  if (!requestZipInfo) {
     return { eligible: false, score: 0, reasons: [] };
   }
 
+  const requestCoordinates = request.coordinates ?? requestZipInfo.coordinates;
+
   if (provider.locationKind === "mobile") {
-    return scoreMobileGeography(requestZip, requestCounty, requestCoordinates, provider);
+    return scoreMobileGeography(requestZip, requestZipInfo.counties, requestCoordinates, provider);
   }
 
-  return scorePhysicalGeography(requestZip, requestCoordinates, provider);
+  return scorePhysicalGeography(requestZip, requestZipInfo.counties, requestCoordinates, provider);
 }
 
 function scoreMobileGeography(
   requestZip: string,
-  requestCounty: string | undefined,
+  requestCounties: LaunchCounty[],
   requestCoordinates: Coordinates | undefined,
   provider: Provider
 ): { eligible: boolean; score: number; distanceMiles?: number; reasons: string[] } {
@@ -220,7 +211,7 @@ function scoreMobileGeography(
     return { eligible: true, score: 20, reasons: ["geography:mobile-zip"] };
   }
 
-  if (requestCounty && serviceArea.counties?.includes(requestCounty as (typeof LAUNCH_COUNTIES)[number])) {
+  if (serviceArea.counties?.some((county) => requestCounties.includes(county))) {
     return { eligible: true, score: 16, reasons: ["geography:mobile-county"] };
   }
 
@@ -241,11 +232,12 @@ function scoreMobileGeography(
 
 function scorePhysicalGeography(
   requestZip: string,
+  requestCounties: LaunchCounty[],
   requestCoordinates: Coordinates | undefined,
   provider: Provider
 ): { eligible: boolean; score: number; distanceMiles?: number; reasons: string[] } {
   const address = provider.address;
-  if (!address || !LAUNCH_COUNTIES.includes(address.county)) {
+  if (!address || !requestCounties.includes(address.county)) {
     return { eligible: false, score: 0, reasons: [] };
   }
 
@@ -253,7 +245,7 @@ function scorePhysicalGeography(
     return { eligible: true, score: 18, reasons: ["geography:shop-same-zip"] };
   }
 
-  const providerCoordinates = address.coordinates ?? ZIP_CENTROIDS[normalizeZip(address.zip)]?.coordinates;
+  const providerCoordinates = address.coordinates ?? getLaunchZipInfo(address.zip)?.coordinates;
   if (requestCoordinates && providerCoordinates) {
     const distanceMiles = haversineMiles(providerCoordinates, requestCoordinates);
     return {

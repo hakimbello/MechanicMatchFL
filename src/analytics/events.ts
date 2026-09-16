@@ -1,4 +1,5 @@
 import type { CustomerServiceCategory, LocationKind, ProviderType } from "../domain/providers.ts";
+import { classifyLaunchZip } from "../geography/launchGeography.ts";
 import type { ContactMethod } from "../profiles/contact.ts";
 
 export type AnalyticsEventName =
@@ -107,19 +108,7 @@ export function buildProviderSubmissionCompletedEvent(input: ProviderSubmissionC
 }
 
 export function classifyLaunchArea(zip?: string): "Miami-Dade" | "Broward" | undefined {
-  if (!zip) {
-    return undefined;
-  }
-
-  if (["33130", "33139", "33155", "33161"].includes(zip)) {
-    return "Miami-Dade";
-  }
-
-  if (["33020", "33301", "33311", "33316"].includes(zip)) {
-    return "Broward";
-  }
-
-  return undefined;
+  return classifyLaunchZip(zip);
 }
 
 function compactProperties(properties: AnalyticsEventProperties): AnalyticsEventProperties {

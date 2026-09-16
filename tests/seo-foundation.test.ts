@@ -3,6 +3,7 @@ import test from "node:test";
 
 import { DEVELOPMENT_PROVIDERS } from "../src/fixtures/developmentProviders.ts";
 import { getPublicProviderById } from "../src/profiles/providerProfiles.ts";
+import { getDefaultProviderData } from "../src/providers/providerSource.ts";
 import { adminProvidersMetadata, buildMechanicProfileMetadata, buildRootMetadata, homeMetadata } from "../src/seo/metadata.ts";
 import { ADMIN_DISALLOW_RULES, buildRobotsRules } from "../src/seo/robots.ts";
 import { buildAbsoluteUrl, buildCanonicalPath, getSiteUrl } from "../src/seo/site.ts";
@@ -106,6 +107,14 @@ test("sitemap contains expected public profile URLs", () => {
   assert.ok(urls.includes("https://mechanicmatchfl.com/list-your-business"));
   assert.ok(urls.includes("https://mechanicmatchfl.com/mechanics/dev-dade-ac-specialist"));
   assert.equal(urls.includes("https://mechanicmatchfl.com/mechanics/dev-inactive-electrical"), false);
+});
+
+test("production sitemap excludes development provider profile URLs", () => {
+  const urls = buildPublicSitemapEntries(getDefaultProviderData({ NODE_ENV: "production" })).map((entry) => entry.url);
+
+  assert.ok(urls.includes("https://mechanicmatchfl.com/"));
+  assert.ok(urls.includes("https://mechanicmatchfl.com/list-your-business"));
+  assert.equal(urls.some((url) => url.includes("/mechanics/dev-")), false);
 });
 
 test("robots rules do not accidentally block the public site", () => {

@@ -1,12 +1,12 @@
 # MechanicMatchFL Development Notes
 
-## Geography Coverage Debt
+## Geography Coverage
 
-M2 and M3 introduced a limited development ZIP/centroid set for Miami-Dade and Broward so deterministic matching and the customer search flow can be tested without a production geography system.
+M2 and M3 introduced a limited development ZIP/centroid set for Miami-Dade and Broward so deterministic matching and the customer search flow could be tested without a production geography system.
 
-This is not production-complete. Before Production Close, replace the current hard-coded ZIP/centroid coverage with an approved geography data source or service that covers the full launch area.
+M10 separates ZIP eligibility from distance-capable coordinate data. Customer search now accepts the documented Miami-Dade and Broward launch ZIP set in `src/geography/launchGeography.ts`, while approximate distance labels remain limited to ZIPs with existing trusted coordinates. For launch ZIPs without coordinates, the matcher uses county-level eligibility and does not invent mileage.
 
-Current limitation is intentionally preserved during M4 to avoid turning profile and lead conversion work into a geocoding milestone.
+Post-launch geography work should replace the static ZIP source with an approved maintained data source or service, then add trusted coordinates or geocoding where needed.
 
 ## M5 Temporary Provider Submission Infrastructure
 
@@ -16,10 +16,12 @@ Production requirements before launch:
 
 - replace the browser/local in-memory repository with durable server-side persistence;
 - connect admin access to real authentication and authorization;
-- add production image storage before accepting real binary uploads;
+- keep provider images deferred unless production image storage, moderation, and validation are explicitly added;
 - preserve the lifecycle rules so draft/submitted/under-review/changes-requested/rejected/deactivated providers cannot become public accidentally.
 
 The `/admin/providers` route is development-only. It is intentionally not represented as production security.
+
+M10 also prevents development fixture provider data from becoming the default provider source in `NODE_ENV=production`. Production should show no fictional provider listings until durable production records are connected.
 
 ## M6 SEO Foundation Notes
 

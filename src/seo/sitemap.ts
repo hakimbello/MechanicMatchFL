@@ -1,6 +1,6 @@
 import type { Provider } from "../domain/providers.ts";
-import { DEVELOPMENT_PROVIDERS } from "../fixtures/developmentProviders.ts";
 import { getPublicProviderIds } from "../profiles/providerProfiles.ts";
+import { getDefaultProviderData } from "../providers/providerSource.ts";
 import { isPublicProvider } from "../submissions/publication.ts";
 import { buildAbsoluteUrl } from "./site.ts";
 
@@ -10,7 +10,7 @@ export interface PublicSitemapEntry {
   priority: number;
 }
 
-export function buildPublicSitemapEntries(providers: Provider[] = DEVELOPMENT_PROVIDERS): PublicSitemapEntry[] {
+export function buildPublicSitemapEntries(providers: Provider[] = getDefaultProviderData()): PublicSitemapEntry[] {
   return [
     {
       url: buildAbsoluteUrl("/"),

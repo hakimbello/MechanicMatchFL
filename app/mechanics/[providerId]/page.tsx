@@ -24,6 +24,8 @@ type MechanicProfilePageProps = {
   }>;
 };
 
+export const dynamicParams = false;
+
 export function generateStaticParams() {
   return getPublicProviderIds().map((providerId) => ({ providerId }));
 }

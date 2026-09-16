@@ -5,7 +5,7 @@ import {
   type MatchRequest,
   type Provider
 } from "../domain/providers.ts";
-import { DEVELOPMENT_PROVIDERS } from "../fixtures/developmentProviders.ts";
+import { getDefaultProviderData } from "../providers/providerSource.ts";
 import { buildContactActions, type ContactAction } from "./contact.ts";
 import {
   formatLocationKind,
@@ -45,11 +45,11 @@ export interface ProviderProfileView {
   matchContext?: ProfileMatchContext;
 }
 
-export function getPublicProviderById(id: string, providers: Provider[] = DEVELOPMENT_PROVIDERS): Provider | null {
+export function getPublicProviderById(id: string, providers: Provider[] = getDefaultProviderData()): Provider | null {
   return providers.find((provider) => provider.id === id && isPublicProvider(provider)) ?? null;
 }
 
-export function getPublicProviderIds(providers: Provider[] = DEVELOPMENT_PROVIDERS): string[] {
+export function getPublicProviderIds(providers: Provider[] = getDefaultProviderData()): string[] {
   return providers.filter(isPublicProvider).map((provider) => provider.id);
 }
 

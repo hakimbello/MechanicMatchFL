@@ -58,4 +58,4 @@ A future SEO landing page should not be published unless it has sufficient relev
 - Configure `NEXT_PUBLIC_SITE_URL` for production.
 - Confirm production sitemap and robots output under the final domain.
 - Add Search Console only after real domain ownership exists.
-- Preserve existing blockers for full Miami-Dade/Broward geography coverage, durable provider persistence, real admin authentication/authorization, production image storage, and lifecycle/publication safety.
+- Preserve existing blockers for durable provider persistence, real admin authentication/authorization, production provider records, and lifecycle/publication safety. Provider images are deferred from V1.

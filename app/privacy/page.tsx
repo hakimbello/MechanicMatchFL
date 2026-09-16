@@ -46,8 +46,9 @@ export default function PrivacyPage() {
         <h2>Provider Submissions</h2>
         <p>
           Providers can submit business name, phone, email, provider type, services, vehicle compatibility,
-          shop or mobile service area, description, optional image reference, optional registration
-          information, and authorization information for review.
+          shop or mobile service area, description, optional registration information, and authorization
+          information for review. Provider images are deferred from V1 and are not collected by the current
+          submission form.
         </p>
         <p>
           During this development milestone, provider submissions are stored in the submitting browser

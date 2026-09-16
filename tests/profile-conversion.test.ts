@@ -9,6 +9,7 @@ import {
   buildProviderProfileView,
   getPublicProviderById
 } from "../src/profiles/providerProfiles.ts";
+import { getDefaultProviderData } from "../src/providers/providerSource.ts";
 
 test("builds stable mechanic profile hrefs from provider IDs", () => {
   assert.equal(buildProfileHref("dev-dade-ac-specialist"), "/mechanics/dev-dade-ac-specialist");
@@ -139,4 +140,11 @@ test("inactive development providers cannot become public profiles", () => {
 
   assert.equal(inactiveProvider?.status, "deactivated");
   assert.equal(getPublicProviderById("dev-inactive-electrical"), null);
+});
+
+test("production provider source does not expose development provider profiles", () => {
+  const productionProviders = getDefaultProviderData({ NODE_ENV: "production" });
+
+  assert.deepEqual(productionProviders, []);
+  assert.equal(getPublicProviderById("dev-dade-ac-specialist", productionProviders), null);
 });

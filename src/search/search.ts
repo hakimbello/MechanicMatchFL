@@ -5,9 +5,10 @@ import {
   type MatchRequest,
   type Provider
 } from "../domain/providers.ts";
-import { DEVELOPMENT_PROVIDERS } from "../fixtures/developmentProviders.ts";
+import { isLaunchZip } from "../geography/launchGeography.ts";
 import { buildProfileHref } from "../profiles/providerProfiles.ts";
 import { SERVICE_CATEGORY_LABELS, SPECIALTY_LABELS, PROVIDER_TYPE_LABELS } from "../presentation/providerText.ts";
+import { getDefaultProviderData } from "../providers/providerSource.ts";
 
 export interface SearchFormInput {
   year: string;
@@ -56,11 +57,9 @@ export const VEHICLE_MAKE_OPTIONS = ["Chevrolet", "Ford", "Honda", "Hyundai", "K
 
 export const VEHICLE_YEAR_OPTIONS = Array.from({ length: 31 }, (_, index) => String(new Date().getFullYear() + 1 - index));
 
-const LAUNCH_ZIPS = new Set(["33020", "33130", "33139", "33155", "33161", "33301", "33311", "33316"]);
-
 export function runProviderSearch(
   input: SearchFormInput,
-  providers: Provider[] = DEVELOPMENT_PROVIDERS
+  providers: Provider[] = getDefaultProviderData()
 ): { ok: true; request: MatchRequest; results: SearchResultView[] } | { ok: false; errors: SearchFieldErrors } {
   const validation = buildSearchRequest(input);
   if (!validation.ok) {
@@ -123,7 +122,7 @@ export function validateSearchInput(input: SearchFormInput): SearchFieldErrors {
 
   if (!/^\d{5}$/.test(input.zip.trim())) {
     errors.zip = "Enter a valid 5-digit ZIP code.";
-  } else if (!LAUNCH_ZIPS.has(input.zip.trim())) {
+  } else if (!isLaunchZip(input.zip)) {
     errors.zip = "Enter a Miami-Dade or Broward ZIP code.";
   }
 

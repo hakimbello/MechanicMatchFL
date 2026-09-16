@@ -84,8 +84,8 @@ export function validateProviderSubmission(input: ProviderSubmissionInput): Subm
     errors.description = "Keep the description under 500 characters.";
   }
 
-  if (input.profileImageRef.trim() && !isSafeImageReference(input.profileImageRef)) {
-    errors.profileImageRef = "Use a safe image reference path, or leave this blank.";
+  if (input.profileImageRef.trim()) {
+    errors.profileImageRef = "Provider images are deferred for V1.";
   }
 
   return errors;
@@ -126,7 +126,7 @@ export function createSubmittedProviderRecord(
       makesServiced: input.allMakes ? undefined : splitCommaValues(input.makesServiced),
       specialtyMakes: splitCommaValues(input.specialtyMakes),
       description: input.description.trim(),
-      profileImageRef: optionalTrim(input.profileImageRef),
+      profileImageRef: undefined,
       registration: input.registrationNumber.trim()
         ? { value: input.registrationNumber.trim(), verificationStatus: "submitted-unverified" }
         : undefined,
@@ -180,11 +180,6 @@ function isLaunchCounty(value: string): value is LaunchCounty {
 
 function isAuthorizationRelationship(value: string): value is AuthorizationRelationship {
   return AUTHORIZATION_RELATIONSHIPS.includes(value as AuthorizationRelationship);
-}
-
-function isSafeImageReference(value: string): boolean {
-  const trimmed = value.trim();
-  return trimmed.startsWith("/") && !trimmed.includes("..");
 }
 
 function optionalTrim(value: string): string | undefined {

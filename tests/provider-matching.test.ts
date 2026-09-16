@@ -211,6 +211,24 @@ test("includes mobile mechanics when the customer is inside the service area", (
   assert.ok(matches.some((match) => match.provider.id === "mobile-north-miami"));
 });
 
+test("matches same-county physical providers for launch ZIPs without centroid data", () => {
+  const matches = matchProviders({ ...acRequest, zip: "33101" }, providers);
+  const specialist = matches.find((match) => match.provider.id === "ac-specialist-miami");
+
+  assert.ok(specialist);
+  assert.equal(specialist.distanceMiles, undefined);
+  assert.ok(specialist.reasons.includes("geography:shop-launch-county"));
+});
+
+test("rejects physical providers outside the launch ZIP county when no distance can be trusted", () => {
+  const matches = matchProviders(
+    { serviceCategory: "transmission", vehicle: { make: "Ford" }, zip: "33101" },
+    providers
+  );
+
+  assert.ok(matches.every((match) => match.provider.address?.county !== "Broward"));
+});
+
 test("excludes mobile mechanics outside their service area", () => {
   const matches = matchProviders(acRequest, providers);
 

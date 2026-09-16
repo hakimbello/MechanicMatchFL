@@ -306,14 +306,6 @@ export function ProviderSubmissionForm() {
             value={form.description}
           />
           <TextField
-            error={errors.profileImageRef}
-            label="Profile image reference"
-            name="profileImageRef"
-            onChange={(value) => updateField("profileImageRef", value)}
-            placeholder="Optional path, such as /images/provider.png"
-            value={form.profileImageRef}
-          />
-          <TextField
             label="Florida repair registration"
             name="registrationNumber"
             onChange={(value) => updateField("registrationNumber", value)}

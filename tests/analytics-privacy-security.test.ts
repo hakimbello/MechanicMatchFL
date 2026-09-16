@@ -81,6 +81,25 @@ test("search analytics event excludes raw ZIP", () => {
   assert.equal(event.properties.launch_area, "Broward");
 });
 
+test("search analytics launch-area classification covers expanded launch ZIPs", () => {
+  assert.equal(
+    buildMechanicSearchSubmittedEvent({
+      serviceCategory: "brakes",
+      vehicleMake: "Toyota",
+      zip: "33304"
+    }).properties.launch_area,
+    "Broward"
+  );
+  assert.equal(
+    buildMechanicSearchSubmittedEvent({
+      serviceCategory: "maintenance",
+      vehicleMake: "Ford",
+      zip: "33012"
+    }).properties.launch_area,
+    "Miami-Dade"
+  );
+});
+
 test("search analytics event excludes customer PII fields", () => {
   const event = buildMechanicSearchSubmittedEvent({
     serviceCategory: "maintenance",

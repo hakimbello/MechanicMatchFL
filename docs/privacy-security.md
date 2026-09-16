@@ -12,12 +12,13 @@ Customer search inputs currently include vehicle year, make, model, repair or se
 
 ## Provider Data Flow
 
-Provider submission inputs currently include business/provider name, phone, email, provider type, services, vehicle compatibility, physical address or mobile service area, description, optional image reference, optional Florida repair registration, authorization relationship, and authorization attestation.
+Provider submission inputs currently include business/provider name, phone, email, provider type, services, vehicle compatibility, physical address or mobile service area, description, optional Florida repair registration, authorization relationship, and authorization attestation.
 
 - M5 temporary provider submissions are stored in the submitting browser through `localStorage`, with an in-memory fallback when storage is unavailable.
 - This temporary development storage may include provider phone, email, street address, description, registration value, and authorization fields.
 - This is not production persistence.
 - Production requires durable server-side storage with appropriate access controls.
+- Provider images are deferred from V1. The current UI does not collect image references, and validation rejects stale image-reference submissions.
 - Analytics for provider submissions intentionally includes only provider type and location kind.
 
 ## Analytics Events

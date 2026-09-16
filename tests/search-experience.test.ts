@@ -8,6 +8,7 @@ import {
   validateSearchInput,
   type SearchFormInput
 } from "../src/search/search.ts";
+import { getDefaultProviderData } from "../src/providers/providerSource.ts";
 
 const validAcSearch: SearchFormInput = {
   year: "2015",
@@ -38,9 +39,18 @@ test("validates ZIP format and launch geography", () => {
   assert.equal(validateSearchInput({ ...validAcSearch, zip: "90210" }).zip, "Enter a Miami-Dade or Broward ZIP code.");
 });
 
-test("documents temporary hard-coded launch ZIP limitation", () => {
+test("accepts Miami-Dade and Broward launch ZIP coverage beyond the original centroid set", () => {
   for (const zip of ["33101", "33012", "33304", "33064"]) {
-    assert.equal(validateSearchInput({ ...validAcSearch, zip }).zip, "Enter a Miami-Dade or Broward ZIP code.");
+    assert.equal(validateSearchInput({ ...validAcSearch, zip }).zip, undefined);
+  }
+});
+
+test("builds requests for launch ZIPs even when trusted centroid data is unavailable", () => {
+  const request = buildSearchRequest({ ...validAcSearch, zip: "33101" });
+
+  assert.equal(request.ok, true);
+  if (request.ok) {
+    assert.equal(request.request.zip, "33101");
   }
 });
 
@@ -112,6 +122,17 @@ test("physical providers can display approximate distance when available", () =>
   }
 });
 
+test("physical providers do not display fake distance for launch ZIPs without trusted coordinates", () => {
+  const search = runProviderSearch({ ...validAcSearch, zip: "33101" });
+
+  assert.equal(search.ok, true);
+  if (search.ok) {
+    const specialist = search.results.find((result) => result.id === "dev-dade-ac-specialist");
+    assert.ok(specialist);
+    assert.ok(!specialist.reasons.some((reason) => reason.endsWith("miles away")));
+  }
+});
+
 test("returns a clear no-match state input when no providers match", () => {
   const search = runProviderSearch({
     year: "2010",
@@ -153,5 +174,14 @@ test("customer-facing match reasons are derived from actual match data", () => {
     assert.ok(specialist.reasons.includes("Works on Honda vehicles"));
     assert.ok(specialist.reasons.includes("Verified profile"));
     assert.ok(!specialist.reasons.some((reason) => reason.startsWith("service:")));
+  }
+});
+
+test("production default provider source returns no fictional development listings", () => {
+  const search = runProviderSearch(validAcSearch, getDefaultProviderData({ NODE_ENV: "production" }));
+
+  assert.equal(search.ok, true);
+  if (search.ok) {
+    assert.deepEqual(search.results, []);
   }
 });

@@ -11,15 +11,17 @@ M9 verified the M1-M8 application as an integrated MVP. M9 can pass with product
 
 ## Code Blockers
 
+### RESOLVED IN M10 CODE
+
+- Search ZIP eligibility was expanded to documented Miami-Dade and Broward launch ZIP coverage. M10 keeps distance labels limited to ZIPs with existing trusted coordinates and uses same-county matching when only county-level ZIP eligibility is known.
+- Provider images were removed from the V1 submission UI and are rejected by validation if a stale client sends `profileImageRef`.
+- Development fixture providers are no longer the default production provider source.
+
 ### STILL BLOCKING
 
-- Replace the limited hard-coded launch ZIP and centroid table with approved Miami-Dade and Broward coverage. Current accepted search ZIPs are only `33020`, `33130`, `33139`, `33155`, `33161`, `33301`, `33311`, and `33316`.
 - Add durable server-side provider persistence. Current provider submissions are stored in browser `localStorage` with an in-memory fallback.
 - Add real production admin authentication and authorization, or replace the development admin with a production-safe review surface.
-
-### NEEDS DECISION
-
-- Decide whether provider images are part of V1. If yes, add production image storage and validation. If no, remove or explicitly defer image submission from the V1 launch path.
+- Replace development fixture listings with durable production provider records before launch.
 
 ### VERIFIED NOT A CURRENT CODE BUG
 

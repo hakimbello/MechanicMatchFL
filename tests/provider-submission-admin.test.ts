@@ -234,6 +234,15 @@ test("user-entered registration remains submitted and unverified", () => {
   });
 });
 
+test("provider images are deferred from V1 submissions", () => {
+  const errors = validateProviderSubmission({
+    ...validPhysicalSubmission,
+    profileImageRef: "/images/provider.png"
+  });
+
+  assert.equal(errors.profileImageRef, "Provider images are deferred for V1.");
+});
+
 test("temporary admin authorization boundary is clearly development-only", () => {
   const access = getDevelopmentAdminAccess();
 
