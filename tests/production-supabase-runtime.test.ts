@@ -191,6 +191,9 @@ test("Phase 1B client and server wiring keeps secrets server-only", () => {
   const submissionAction = readFileSync("app/list-your-business/actions.ts", "utf8");
 
   assert.match(browserClient, /createBrowserClient/);
+  assert.match(browserClient, /process\.env\.NEXT_PUBLIC_SUPABASE_URL/);
+  assert.match(browserClient, /process\.env\.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY/);
+  assert.doesNotMatch(browserClient, /process\.env\s*\[/);
   assert.equal(browserClient.includes("SUPABASE_SECRET_KEY"), false);
   assert.match(serverClient, /createSupabasePrivilegedDataClient/);
   assert.match(serverClient, /getSupabaseServerSecretConfig/);

@@ -2,7 +2,13 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-import { SUPABASE_ENVIRONMENT_CONTRACT, assertNoServerOnlySupabaseEnvIsClientExposed } from "../src/config/supabaseEnvironment.ts";
+import {
+  MissingSupabaseConfigurationError,
+  SUPABASE_ENVIRONMENT_CONTRACT,
+  assertNoServerOnlySupabaseEnvIsClientExposed,
+  getSupabaseClientSafeConfig,
+  getSupabaseServerSecretConfig
+} from "../src/config/supabaseEnvironment.ts";
 import type { ProviderStatus } from "../src/domain/providers.ts";
 import {
   PUBLIC_PROVIDER_ROW_FIELDS,
@@ -169,4 +175,26 @@ test("Supabase environment contract separates client-safe and server-only values
   assert.doesNotThrow(() => assertNoServerOnlySupabaseEnvIsClientExposed());
   assert.match(envExample, /NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_replace_me/);
   assert.match(envExample, /SUPABASE_SECRET_KEY=sb_secret_replace_me/);
+});
+
+test("Supabase environment validation preserves client-missing and server-secret boundaries", () => {
+  const clientConfig = {
+    NEXT_PUBLIC_SUPABASE_URL: "https://example.test",
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "public-test-key"
+  };
+
+  assert.deepEqual(getSupabaseClientSafeConfig(clientConfig), {
+    url: "https://example.test",
+    publishableKey: "public-test-key"
+  });
+  assert.throws(
+    () => getSupabaseClientSafeConfig({ ...clientConfig, NEXT_PUBLIC_SUPABASE_URL: "" }),
+    MissingSupabaseConfigurationError
+  );
+  assert.deepEqual(getSupabaseServerSecretConfig({ ...clientConfig, SUPABASE_SECRET_KEY: "server-test-key" }), {
+    url: "https://example.test",
+    publishableKey: "public-test-key",
+    secretKey: "server-test-key"
+  });
+  assert.throws(() => getSupabaseServerSecretConfig(clientConfig), MissingSupabaseConfigurationError);
 });
