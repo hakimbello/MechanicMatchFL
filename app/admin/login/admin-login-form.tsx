@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
@@ -85,6 +86,9 @@ export function AdminLoginForm({ nextPath }: { nextPath: string }) {
         <button className="primary-action" disabled={isSubmitting} type="submit">
           {isSubmitting ? "Signing in..." : "Sign In"}
         </button>
+        <Link className="provider-entry-link standalone-link" href="/admin/forgot-password">
+          Forgot password?
+        </Link>
       </section>
     </form>
   );

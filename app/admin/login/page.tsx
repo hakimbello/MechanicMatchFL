@@ -19,11 +19,11 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 type AdminLoginPageProps = {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; reset?: string }>;
 };
 
 export default async function AdminLoginPage({ searchParams }: AdminLoginPageProps) {
-  const { next } = await searchParams;
+  const { next, reset } = await searchParams;
   const nextPath = normalizeAdminNextPath(next);
   const authorization = await getAdminAuthorization();
 
@@ -41,6 +41,12 @@ export default async function AdminLoginPage({ searchParams }: AdminLoginPagePro
         <h1>Provider review access</h1>
         <p className="intro">Sign in with an authorized MechanicMatchFL administrator account.</p>
       </section>
+      {reset === "success" ? (
+        <section className="confirmation-panel" aria-live="polite">
+          <h2>Password updated</h2>
+          <p>Sign in with your new password.</p>
+        </section>
+      ) : null}
       <AdminLoginForm nextPath={nextPath} />
     </main>
   );
