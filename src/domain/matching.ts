@@ -1,7 +1,6 @@
 import {
   type Coordinates,
   type CustomerServiceCategory,
-  type LaunchCounty,
   type MatchRequest,
   type Provider,
   type ProviderSpecialty
@@ -9,6 +8,7 @@ import {
 import { getLaunchZipInfo } from "../geography/launchGeography.ts";
 
 const ACTIVE_MATCH_STATUS = "active";
+export const MAX_PHYSICAL_SHOP_DISTANCE_MILES = 30;
 
 const SERVICE_RELEVANCE: Record<CustomerServiceCategory, Partial<Record<ProviderSpecialty, number>>> = {
   "wont-start": {
@@ -186,19 +186,21 @@ function scoreGeography(
     return { eligible: false, score: 0, reasons: [] };
   }
 
-  const requestCoordinates = request.coordinates ?? requestZipInfo.coordinates;
-
-  if (provider.locationKind === "mobile") {
-    return scoreMobileGeography(requestZip, requestZipInfo.counties, requestCoordinates, provider);
+  const requestCoordinates = requestZipInfo.coordinates;
+  if (!requestCoordinates) {
+    return { eligible: false, score: 0, reasons: [] };
   }
 
-  return scorePhysicalGeography(requestZip, requestZipInfo.counties, requestCoordinates, provider);
+  if (provider.locationKind === "mobile") {
+    return scoreMobileGeography(requestZip, requestCoordinates, provider);
+  }
+
+  return scorePhysicalGeography(requestZip, requestCoordinates, provider);
 }
 
 function scoreMobileGeography(
   requestZip: string,
-  requestCounties: LaunchCounty[],
-  requestCoordinates: Coordinates | undefined,
+  requestCoordinates: Coordinates,
   provider: Provider
 ): { eligible: boolean; score: number; distanceMiles?: number; reasons: string[] } {
   const serviceArea = provider.mobileServiceArea;
@@ -211,12 +213,11 @@ function scoreMobileGeography(
     return { eligible: true, score: 20, reasons: ["geography:mobile-zip"] };
   }
 
-  if (serviceArea.counties?.some((county) => requestCounties.includes(county))) {
-    return { eligible: true, score: 16, reasons: ["geography:mobile-county"] };
-  }
-
-  if (serviceArea.radiusMiles && serviceArea.baseCoordinates && requestCoordinates) {
-    const distanceMiles = haversineMiles(serviceArea.baseCoordinates, requestCoordinates);
+  const baseCoordinates = serviceArea.baseZip
+    ? getLaunchZipInfo(serviceArea.baseZip)?.coordinates
+    : undefined;
+  if (serviceArea.radiusMiles && baseCoordinates) {
+    const distanceMiles = haversineMiles(baseCoordinates, requestCoordinates);
     if (distanceMiles <= serviceArea.radiusMiles) {
       return {
         eligible: true,
@@ -232,31 +233,30 @@ function scoreMobileGeography(
 
 function scorePhysicalGeography(
   requestZip: string,
-  requestCounties: LaunchCounty[],
-  requestCoordinates: Coordinates | undefined,
+  requestCoordinates: Coordinates,
   provider: Provider
 ): { eligible: boolean; score: number; distanceMiles?: number; reasons: string[] } {
   const address = provider.address;
-  if (!address || !requestCounties.includes(address.county)) {
+  if (!address) {
     return { eligible: false, score: 0, reasons: [] };
   }
 
-  if (address.zip === requestZip) {
-    return { eligible: true, score: 18, reasons: ["geography:shop-same-zip"] };
+  const providerCoordinates = getLaunchZipInfo(address.zip)?.coordinates;
+  if (!providerCoordinates) {
+    return { eligible: false, score: 0, reasons: [] };
   }
 
-  const providerCoordinates = address.coordinates ?? getLaunchZipInfo(address.zip)?.coordinates;
-  if (requestCoordinates && providerCoordinates) {
-    const distanceMiles = haversineMiles(providerCoordinates, requestCoordinates);
-    return {
-      eligible: true,
-      score: Math.max(4, 17 - distanceMiles / 3),
-      distanceMiles,
-      reasons: ["geography:shop-distance"]
-    };
+  const distanceMiles = haversineMiles(providerCoordinates, requestCoordinates);
+  if (distanceMiles > MAX_PHYSICAL_SHOP_DISTANCE_MILES) {
+    return { eligible: false, score: 0, reasons: [] };
   }
 
-  return { eligible: true, score: 8, reasons: ["geography:shop-launch-county"] };
+  return {
+    eligible: true,
+    score: address.zip === requestZip ? 18 : Math.max(4, 17 - distanceMiles / 3),
+    distanceMiles,
+    reasons: [address.zip === requestZip ? "geography:shop-same-zip" : "geography:shop-distance"]
+  };
 }
 
 function scoreSuitability(provider: Provider): { score: number; reasons: string[] } {

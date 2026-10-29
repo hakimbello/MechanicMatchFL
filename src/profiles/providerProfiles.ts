@@ -38,6 +38,8 @@ export interface ProviderProfileView {
   services: string[];
   makesLine: string;
   specialtyMakesLine?: string;
+  experienceLine?: string;
+  languagesLine?: string;
   description?: string;
   verified: boolean;
   claimedProfile: boolean;
@@ -88,6 +90,13 @@ export function buildProviderProfileView(provider: Provider, context?: ProfileSe
     services: provider.services.map(formatSpecialty),
     makesLine: provider.allMakes ? "Works on all makes" : `Works on ${provider.makesServiced?.join(", ") ?? "selected makes"}`,
     specialtyMakesLine: provider.specialtyMakes?.length ? `Specializes in ${provider.specialtyMakes.join(", ")}` : undefined,
+    experienceLine:
+      typeof provider.yearsExperience === "number"
+        ? `Provider-reported: ${provider.yearsExperience} ${provider.yearsExperience === 1 ? "year" : "years"}`
+        : undefined,
+    languagesLine: provider.spokenLanguages?.length
+      ? `Provider-reported: ${provider.spokenLanguages.join(", ")}`
+      : undefined,
     description: provider.description,
     verified: Boolean(provider.trust?.verified),
     claimedProfile: Boolean(provider.trust?.claimedProfile),
@@ -150,16 +159,16 @@ function buildServiceAreaLine(provider: Provider): string | undefined {
   }
 
   const zipCodes = provider.mobileServiceArea?.zipCodes;
+  const baseZip = provider.mobileServiceArea?.baseZip;
+  const radiusMiles = provider.mobileServiceArea?.radiusMiles;
+  const parts: string[] = [];
   if (zipCodes?.length) {
-    return `Serves ZIP codes ${zipCodes.join(", ")}`;
+    parts.push(`ZIP codes ${zipCodes.join(", ")}`);
   }
-
-  const counties = provider.mobileServiceArea?.counties;
-  if (counties?.length) {
-    return `Serves ${counties.join(", ")}`;
+  if (baseZip && radiusMiles) {
+    parts.push(`${radiusMiles} miles from ${baseZip}`);
   }
-
-  return "Serves a defined mobile service area";
+  return parts.length ? `Serves ${parts.join("; ")}` : "Service area not available";
 }
 
 function isCustomerServiceCategory(value: string): value is CustomerServiceCategory {

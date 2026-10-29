@@ -211,22 +211,108 @@ test("includes mobile mechanics when the customer is inside the service area", (
   assert.ok(matches.some((match) => match.provider.id === "mobile-north-miami"));
 });
 
-test("matches same-county physical providers for launch ZIPs without centroid data", () => {
+test("uses trusted Census centroids for physical shop distance", () => {
   const matches = matchProviders({ ...acRequest, zip: "33101" }, providers);
   const specialist = matches.find((match) => match.provider.id === "ac-specialist-miami");
 
   assert.ok(specialist);
-  assert.equal(specialist.distanceMiles, undefined);
-  assert.ok(specialist.reasons.includes("geography:shop-launch-county"));
+  assert.ok(typeof specialist.distanceMiles === "number");
+  assert.ok(specialist.reasons.includes("geography:shop-distance"));
 });
 
-test("rejects physical providers outside the launch ZIP county when no distance can be trusted", () => {
+test("fails safely when the requested launch ZIP has no Census coordinate", () => {
+  const matches = matchProviders({ ...acRequest, zip: "33102" }, providers);
+
+  assert.deepEqual(matches, []);
+});
+
+test("does not let unverified coordinate overrides rescue missing ZIP coverage", () => {
   const matches = matchProviders(
-    { serviceCategory: "transmission", vehicle: { make: "Ford" }, zip: "33101" },
+    { ...acRequest, zip: "33102", coordinates: { latitude: 25.8, longitude: -80.2 } },
     providers
   );
+  const coordinateOnlyMobile: Provider = {
+    id: "coordinate-only-mobile",
+    name: "Coordinate Only Mobile",
+    type: "mobile-mechanic",
+    status: "active",
+    locationKind: "mobile",
+    mobileServiceArea: {
+      radiusMiles: 10,
+      baseCoordinates: { latitude: 25.893543, longitude: -80.183272 }
+    },
+    services: ["ac"],
+    allMakes: true
+  };
 
-  assert.ok(matches.every((match) => match.provider.address?.county !== "Broward"));
+  assert.deepEqual(matches, []);
+  assert.deepEqual(matchProviders(acRequest, [coordinateOnlyMobile]), []);
+});
+
+test("matches nearby physical shops across a county boundary", () => {
+  const crossCountyShop: Provider = {
+    id: "border-shop",
+    name: "Border Shop",
+    type: "independent-auto-repair-shop",
+    status: "active",
+    locationKind: "physical",
+    address: { street: "1 Border Ave", city: "Hollywood", county: "Broward", zip: "33023" },
+    services: ["general-repair"],
+    allMakes: true
+  };
+  const matches = matchProviders(
+    { serviceCategory: "other-not-sure", vehicle: { make: "Honda" }, zip: "33179" },
+    [crossCountyShop]
+  );
+
+  assert.equal(matches[0]?.provider.id, "border-shop");
+  assert.ok(typeof matches[0]?.distanceMiles === "number");
+});
+
+test("does not treat mobile county membership as service coverage", () => {
+  const countyOnlyMobile: Provider = {
+    id: "legacy-county-mobile",
+    name: "Legacy County Mobile",
+    type: "mobile-mechanic",
+    status: "active",
+    locationKind: "mobile",
+    mobileServiceArea: { counties: ["Miami-Dade"] },
+    services: ["ac"],
+    allMakes: true
+  };
+
+  assert.deepEqual(matchProviders(acRequest, [countyOnlyMobile]), []);
+});
+
+test("matches mobile mechanics only inside their declared base-ZIP radius", () => {
+  const radiusMobile: Provider = {
+    id: "radius-mobile",
+    name: "Radius Mobile",
+    type: "mobile-mechanic",
+    status: "active",
+    locationKind: "mobile",
+    mobileServiceArea: { baseZip: "33161", radiusMiles: 10 },
+    services: ["ac"],
+    allMakes: true
+  };
+
+  assert.equal(matchProviders({ ...acRequest, zip: "33150" }, [radiusMobile]).length, 1);
+  assert.equal(matchProviders({ ...acRequest, zip: "33301" }, [radiusMobile]).length, 0);
+});
+
+test("enforces the physical shop distance policy", () => {
+  const farShop: Provider = {
+    id: "far-shop",
+    name: "Far Shop",
+    type: "independent-auto-repair-shop",
+    status: "active",
+    locationKind: "physical",
+    address: { street: "1 Far Ave", city: "Homestead", county: "Miami-Dade", zip: "33035" },
+    services: ["ac"],
+    allMakes: true
+  };
+
+  assert.deepEqual(matchProviders(acRequest, [farShop]), []);
 });
 
 test("excludes mobile mechanics outside their service area", () => {

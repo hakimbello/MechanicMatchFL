@@ -40,7 +40,8 @@ const validMobileSubmission: ProviderSubmissionInput = {
   providerType: "mobile-mechanic",
   locationKind: "mobile",
   serviceZipCodes: "33161, 33311",
-  serviceCounties: ["Broward"],
+  serviceBaseZip: "33161",
+  serviceRadiusMiles: "20",
   services: ["ac", "maintenance"],
   allMakes: true,
   description: "Fictional mobile mechanic for M5 provider submission testing.",
@@ -124,10 +125,67 @@ test("mobile mechanics require service area information", () => {
   const errors = validateProviderSubmission({
     ...validMobileSubmission,
     serviceZipCodes: "",
-    serviceCounties: []
+    serviceCounties: [],
+    serviceBaseZip: "",
+    serviceRadiusMiles: ""
   });
 
-  assert.equal(errors.serviceZipCodes, "Enter service ZIP codes or choose a service county.");
+  assert.equal(errors.serviceZipCodes, "Enter service ZIP codes or a base ZIP and service radius.");
+});
+
+test("rejects county-only mobile coverage and invalid radius inputs", () => {
+  const countyOnlyErrors = validateProviderSubmission({
+    ...validMobileSubmission,
+    serviceZipCodes: "",
+    serviceCounties: ["Miami-Dade"],
+    serviceBaseZip: "",
+    serviceRadiusMiles: ""
+  });
+  const errors = validateProviderSubmission({
+    ...validMobileSubmission,
+    serviceZipCodes: "",
+    serviceCounties: ["Miami-Dade"],
+    serviceBaseZip: "33102",
+    serviceRadiusMiles: "0"
+  });
+
+  assert.equal(countyOnlyErrors.serviceZipCodes, "Enter service ZIP codes or a base ZIP and service radius.");
+  assert.equal(errors.serviceBaseZip, "Distance matching is not available for this base ZIP.");
+  assert.equal(errors.serviceRadiusMiles, "Enter a service radius from 1 to 100 miles.");
+});
+
+test("collects optional provider-reported experience and languages", () => {
+  const record = submittedRecord({
+    ...validPhysicalSubmission,
+    yearsExperience: "12",
+    spokenLanguages: ["English", "Spanish"],
+    otherLanguage: "Haitian Creole"
+  });
+
+  assert.equal(record.yearsExperience, 12);
+  assert.deepEqual(record.spokenLanguages, ["English", "Spanish", "Haitian Creole"]);
+  const review = buildAdminReviewView(record);
+  assert.equal(review.experience, "12 years (provider-reported)");
+  assert.equal(review.languages, "English, Spanish, Haitian Creole (provider-reported)");
+});
+
+test("validates provider-reported experience and language inputs", () => {
+  const errors = validateProviderSubmission({
+    ...validPhysicalSubmission,
+    yearsExperience: "2.5",
+    spokenLanguages: ["French"],
+    otherLanguage: "x".repeat(61)
+  });
+
+  assert.equal(errors.yearsExperience, "Enter whole years of experience between 1 and 100.");
+  assert.equal(errors.spokenLanguages, "Choose English, Spanish, or enter another language.");
+  assert.equal(errors.otherLanguage, "Keep the other language under 60 characters.");
+});
+
+test("keeps optional M11 fields backwards compatible for legacy records", () => {
+  const record = submittedRecord();
+  assert.equal(record.yearsExperience, undefined);
+  assert.deepEqual(record.spokenLanguages, []);
 });
 
 test("authorization relationship is required", () => {
@@ -213,6 +271,24 @@ test("active approved provider remains publicly eligible", () => {
   assert.ok(provider);
   assert.equal(provider.status, "active");
   assert.equal(isPublicProvider(provider), true);
+});
+
+test("approved mobile radius and provider-reported fields publish only when active", () => {
+  const submitted = submittedRecord({
+    ...validMobileSubmission,
+    yearsExperience: "9",
+    spokenLanguages: ["English", "Spanish"]
+  });
+  assert.equal(convertSubmissionToProvider(submitted), null);
+
+  const provider = convertSubmissionToProvider(move(submitted, ["under-review", "approved", "active"]));
+  assert.ok(provider);
+  assert.equal(provider.mobileServiceArea?.baseZip, "33161");
+  assert.equal(provider.mobileServiceArea?.radiusMiles, 20);
+  assert.equal(provider.yearsExperience, 9);
+  assert.deepEqual(provider.spokenLanguages, ["English", "Spanish"]);
+  assert.equal(JSON.stringify(provider).includes("authorization"), false);
+  assert.equal(JSON.stringify(provider).includes("registration"), false);
 });
 
 test("admin review representation exposes required submitted data", () => {

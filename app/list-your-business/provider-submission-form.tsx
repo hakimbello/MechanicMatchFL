@@ -76,13 +76,13 @@ export function ProviderSubmissionForm() {
     setFormError(null);
   }
 
-  function toggleServiceCounty(county: LaunchCounty) {
+  function toggleLanguage(language: "English" | "Spanish") {
     markSubmissionStarted();
     setForm((current) => {
-      const serviceCounties = current.serviceCounties.includes(county)
-        ? current.serviceCounties.filter((item) => item !== county)
-        : [...current.serviceCounties, county];
-      return { ...current, serviceCounties };
+      const spokenLanguages = current.spokenLanguages.includes(language)
+        ? current.spokenLanguages.filter((item) => item !== language)
+        : [...current.spokenLanguages, language];
+      return { ...current, spokenLanguages };
     });
   }
 
@@ -292,19 +292,27 @@ export function ProviderSubmissionForm() {
                 placeholder="33161, 33311"
                 value={form.serviceZipCodes}
               />
-              <fieldset className="service-options">
-                <legend>Service counties</legend>
-                {LAUNCH_COUNTIES.map((county) => (
-                  <label className="service-choice" key={county}>
-                    <input
-                      checked={form.serviceCounties.includes(county)}
-                      onChange={() => toggleServiceCounty(county)}
-                      type="checkbox"
-                    />
-                    <span>{county}</span>
-                  </label>
-                ))}
-              </fieldset>
+              <p className="field-help">List exact ZIPs, or enter a base ZIP and radius below.</p>
+              <div className="form-grid">
+                <TextField
+                  error={errors.serviceBaseZip}
+                  inputMode="numeric"
+                  label="Base ZIP"
+                  name="serviceBaseZip"
+                  onChange={(value) => updateField("serviceBaseZip", value)}
+                  placeholder="Optional"
+                  value={form.serviceBaseZip}
+                />
+                <TextField
+                  error={errors.serviceRadiusMiles}
+                  inputMode="numeric"
+                  label="Service radius (miles)"
+                  name="serviceRadiusMiles"
+                  onChange={(value) => updateField("serviceRadiusMiles", value)}
+                  placeholder="Optional, 1-100"
+                  value={form.serviceRadiusMiles}
+                />
+              </div>
             </div>
           ) : null}
         </section>
@@ -318,6 +326,38 @@ export function ProviderSubmissionForm() {
             onChange={(value) => updateField("description", value)}
             value={form.description}
           />
+          <TextField
+            error={errors.yearsExperience}
+            inputMode="numeric"
+            label="Years of experience"
+            name="yearsExperience"
+            onChange={(value) => updateField("yearsExperience", value)}
+            placeholder="Optional"
+            value={form.yearsExperience}
+          />
+          <fieldset className="service-options">
+            <legend>Languages spoken (optional)</legend>
+            {(["English", "Spanish"] as const).map((language) => (
+              <label className="service-choice" key={language}>
+                <input
+                  checked={form.spokenLanguages.includes(language)}
+                  onChange={() => toggleLanguage(language)}
+                  type="checkbox"
+                />
+                <span>{language}</span>
+              </label>
+            ))}
+            <FieldError id="spoken-languages-error" message={errors.spokenLanguages} />
+          </fieldset>
+          <TextField
+            error={errors.otherLanguage}
+            label="Another language"
+            name="otherLanguage"
+            onChange={(value) => updateField("otherLanguage", value)}
+            placeholder="Optional, enter the language name"
+            value={form.otherLanguage}
+          />
+          <p className="field-help">Experience and languages are displayed as provider-reported claims.</p>
           <TextField
             label="Florida repair registration"
             name="registrationNumber"

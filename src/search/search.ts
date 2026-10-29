@@ -5,7 +5,7 @@ import {
   type MatchRequest,
   type Provider
 } from "../domain/providers.ts";
-import { isLaunchZip } from "../geography/launchGeography.ts";
+import { hasLaunchZipCoordinates, isLaunchZip } from "../geography/launchGeography.ts";
 import { buildProfileHref } from "../profiles/providerProfiles.ts";
 import { SERVICE_CATEGORY_LABELS, SPECIALTY_LABELS, PROVIDER_TYPE_LABELS } from "../presentation/providerText.ts";
 import { getDefaultProviderData } from "../providers/providerSource.ts";
@@ -124,6 +124,8 @@ export function validateSearchInput(input: SearchFormInput): SearchFieldErrors {
     errors.zip = "Enter a valid 5-digit ZIP code.";
   } else if (!isLaunchZip(input.zip)) {
     errors.zip = "Enter a Miami-Dade or Broward ZIP code.";
+  } else if (!hasLaunchZipCoordinates(input.zip)) {
+    errors.zip = "Distance matching is not available for this ZIP yet. Try a nearby residential ZIP.";
   }
 
   return errors;

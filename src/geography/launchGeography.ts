@@ -1,4 +1,5 @@
 import type { Coordinates, LaunchCounty } from "../domain/providers.ts";
+import { CENSUS_ZCTA_2026_CENTROIDS } from "./censusZcta2026Centroids.ts";
 
 export interface LaunchZipInfo {
   zip: string;
@@ -35,17 +36,6 @@ const BROWARD_LAUNCH_ZIPS = [
   "33349", "33351", "33355", "33359", "33388", "33394", "33441", "33442", "33443"
 ] as const;
 
-const TRUSTED_ZIP_COORDINATES: Record<string, Coordinates> = {
-  "33130": { latitude: 25.768, longitude: -80.201 },
-  "33139": { latitude: 25.782, longitude: -80.134 },
-  "33155": { latitude: 25.737, longitude: -80.315 },
-  "33161": { latitude: 25.893, longitude: -80.182 },
-  "33020": { latitude: 26.011, longitude: -80.149 },
-  "33301": { latitude: 26.123, longitude: -80.143 },
-  "33311": { latitude: 26.145, longitude: -80.174 },
-  "33316": { latitude: 26.102, longitude: -80.136 }
-};
-
 export const LAUNCH_ZIP_DATA: Readonly<Record<string, LaunchZipInfo>> = buildLaunchZipData();
 
 export function getLaunchZipInfo(zip: string): LaunchZipInfo | undefined {
@@ -64,13 +54,17 @@ export function getLaunchZipCoordinates(zip: string): Coordinates | undefined {
   return getLaunchZipInfo(zip)?.coordinates;
 }
 
+export function hasLaunchZipCoordinates(zip: string): boolean {
+  return Boolean(getLaunchZipCoordinates(zip));
+}
+
 function buildLaunchZipData(): Record<string, LaunchZipInfo> {
   const entries = new Map<string, LaunchZipInfo>();
 
   addCountyZips(entries, MIAMI_DADE_LAUNCH_ZIPS, "Miami-Dade");
   addCountyZips(entries, BROWARD_LAUNCH_ZIPS, "Broward");
 
-  for (const [zip, coordinates] of Object.entries(TRUSTED_ZIP_COORDINATES)) {
+  for (const [zip, coordinates] of Object.entries(CENSUS_ZCTA_2026_CENTROIDS)) {
     const entry = entries.get(zip);
     if (entry) {
       entry.coordinates = coordinates;

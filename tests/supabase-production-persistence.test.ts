@@ -21,6 +21,8 @@ import { EMPTY_PROVIDER_SUBMISSION, type ProviderSubmissionInput, type ProviderS
 import { createSubmittedProviderRecord } from "../src/submissions/validation.ts";
 
 const migration = readFileSync("supabase/migrations/202609160001_prepare_provider_persistence.sql", "utf8");
+const m11Migration = readFileSync("supabase/migrations/202610290001_add_m11_geography_profile_fields.sql", "utf8");
+const m11Rollback = readFileSync("supabase/rollbacks/202610290001_add_m11_geography_profile_fields.down.sql", "utf8");
 const envExample = readFileSync(".env.example", "utf8");
 
 const validSubmission: ProviderSubmissionInput = {
@@ -85,7 +87,11 @@ test("Supabase migration does not grant public direct insert or update to provid
 });
 
 test("provider submission mapper preserves private durable fields without self-publishing", () => {
-  const row = mapSubmissionToProviderRecordInsert(submittedRecord());
+  const row = mapSubmissionToProviderRecordInsert(submittedRecord({
+    ...validSubmission,
+    yearsExperience: "18",
+    spokenLanguages: ["English", "Spanish"]
+  }));
 
   assert.equal(row.status, "submitted");
   assert.equal(row.business_name, "Durable Boundary Auto");
@@ -94,6 +100,8 @@ test("provider submission mapper preserves private durable fields without self-p
   assert.equal(row.authorization_relationship, "my-business");
   assert.equal(row.authorization_attested, true);
   assert.equal(row.profile_image_ref, null);
+  assert.equal(row.years_experience, 18);
+  assert.deepEqual(row.spoken_languages, ["English", "Spanish"]);
 });
 
 test("active public provider projection maps only customer-facing provider data", () => {
@@ -111,6 +119,8 @@ test("active public provider projection maps only customer-facing provider data"
     all_makes: active.allMakes,
     makes_serviced: active.makesServiced,
     specialty_makes: active.specialtyMakes,
+    years_experience: 18,
+    spoken_languages: ["English", "Spanish"],
     street: active.street,
     city: active.city,
     county: active.county,
@@ -133,6 +143,8 @@ test("active public provider projection maps only customer-facing provider data"
   assert.ok(provider);
   assert.equal(provider.status, "active");
   assert.equal(provider.contact?.website, "https://durableboundary.example");
+  assert.equal(provider.yearsExperience, 18);
+  assert.deepEqual(provider.spokenLanguages, ["English", "Spanish"]);
   assert.equal(JSON.stringify(provider).includes("authorization"), false);
   assert.equal(JSON.stringify(provider).includes("registration"), false);
 });
@@ -164,6 +176,28 @@ test("public projection field list excludes admin and authorization fields", () 
   assert.equal(serialized.includes("admin_notes"), false);
   assert.equal(serialized.includes("last_reviewed_by"), false);
   assert.equal(serialized.includes("registration"), false);
+});
+
+test("M11 migration is additive, active-only, and preserves private boundaries", () => {
+  assert.match(m11Migration, /add column if not exists years_experience/);
+  assert.match(m11Migration, /add column if not exists spoken_languages/);
+  assert.match(m11Migration, /service_base_zip is not null and service_radius_miles is not null/);
+  assert.match(m11Migration, /where status = 'active'/);
+  assert.match(m11Migration, /revoke all on table public\.active_public_providers from anon, authenticated/);
+  assert.match(m11Migration, /grant select on table public\.active_public_providers to anon, authenticated/);
+  assert.equal(/disable row level security/i.test(m11Migration), false);
+  assert.equal(/authorization_relationship|registration_value|admin_notes|last_reviewed_by/.test(m11Migration), false);
+  assert.equal(/alter table public\.admin_users|is_mechanicmatch_admin/.test(m11Migration), false);
+});
+
+test("M11 rollback restores the prior projection and refuses lossy radius rollback", () => {
+  assert.match(m11Rollback, /Cannot roll back M11 while radius-only mobile providers exist/);
+  assert.match(m11Rollback, /drop column if exists years_experience/);
+  assert.match(m11Rollback, /drop column if exists spoken_languages/);
+  assert.match(m11Rollback, /cardinality\(service_zip_codes\) > 0 or cardinality\(service_counties\) > 0/);
+  assert.match(m11Rollback, /where status = 'active'/);
+  assert.match(m11Rollback, /revoke all on table public\.active_public_providers from anon, authenticated/);
+  assert.match(m11Rollback, /grant select on table public\.active_public_providers to anon, authenticated/);
 });
 
 test("Supabase environment contract separates client-safe and server-only values", () => {

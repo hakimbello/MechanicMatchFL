@@ -106,6 +106,8 @@ export interface Provider {
   allMakes: boolean;
   makesServiced?: string[];
   specialtyMakes?: string[];
+  yearsExperience?: number;
+  spokenLanguages?: string[];
   contact?: ProviderContact;
   description?: string;
   profileImageRef?: string;

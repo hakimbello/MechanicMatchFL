@@ -45,12 +45,15 @@ test("accepts Miami-Dade and Broward launch ZIP coverage beyond the original cen
   }
 });
 
-test("builds requests for launch ZIPs even when trusted centroid data is unavailable", () => {
-  const request = buildSearchRequest({ ...validAcSearch, zip: "33101" });
+test("explains when a launch ZIP has no trusted centroid", () => {
+  const request = buildSearchRequest({ ...validAcSearch, zip: "33102" });
 
-  assert.equal(request.ok, true);
-  if (request.ok) {
-    assert.equal(request.request.zip, "33101");
+  assert.equal(request.ok, false);
+  if (!request.ok) {
+    assert.equal(
+      request.errors.zip,
+      "Distance matching is not available for this ZIP yet. Try a nearby residential ZIP."
+    );
   }
 });
 
@@ -122,14 +125,14 @@ test("physical providers can display approximate distance when available", () =>
   }
 });
 
-test("physical providers do not display fake distance for launch ZIPs without trusted coordinates", () => {
+test("expanded Census coverage displays trusted approximate distance", () => {
   const search = runProviderSearch({ ...validAcSearch, zip: "33101" });
 
   assert.equal(search.ok, true);
   if (search.ok) {
     const specialist = search.results.find((result) => result.id === "dev-dade-ac-specialist");
     assert.ok(specialist);
-    assert.ok(!specialist.reasons.some((reason) => reason.endsWith("miles away")));
+    assert.ok(specialist.reasons.some((reason) => reason.endsWith("miles away")));
   }
 });
 

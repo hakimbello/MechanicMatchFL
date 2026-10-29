@@ -27,10 +27,15 @@ export interface ProviderSubmissionInput {
   zip: string;
   serviceZipCodes: string;
   serviceCounties: LaunchCounty[];
+  serviceBaseZip: string;
+  serviceRadiusMiles: string;
   services: ProviderSpecialty[];
   allMakes: boolean;
   makesServiced: string;
   specialtyMakes: string;
+  yearsExperience: string;
+  spokenLanguages: string[];
+  otherLanguage: string;
   description: string;
   profileImageRef: string;
   registrationNumber: string;
@@ -61,10 +66,14 @@ export interface ProviderSubmissionRecord {
   zip?: string;
   serviceZipCodes?: string[];
   serviceCounties?: LaunchCounty[];
+  serviceBaseZip?: string;
+  serviceRadiusMiles?: number;
   services: ProviderSpecialty[];
   allMakes: boolean;
   makesServiced?: string[];
   specialtyMakes?: string[];
+  yearsExperience?: number;
+  spokenLanguages?: string[];
   description: string;
   profileImageRef?: string;
   registration?: SubmittedRegistration;
@@ -84,10 +93,15 @@ export const EMPTY_PROVIDER_SUBMISSION: ProviderSubmissionInput = {
   zip: "",
   serviceZipCodes: "",
   serviceCounties: [],
+  serviceBaseZip: "",
+  serviceRadiusMiles: "",
   services: [],
   allMakes: true,
   makesServiced: "",
   specialtyMakes: "",
+  yearsExperience: "",
+  spokenLanguages: [],
+  otherLanguage: "",
   description: "",
   profileImageRef: "",
   registrationNumber: "",

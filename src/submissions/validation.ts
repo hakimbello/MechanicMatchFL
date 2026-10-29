@@ -6,6 +6,7 @@ import {
   type ProviderSpecialty,
   type ProviderType
 } from "../domain/providers.ts";
+import { getLaunchZipInfo, hasLaunchZipCoordinates, isLaunchZip } from "../geography/launchGeography.ts";
 import {
   AUTHORIZATION_RELATIONSHIPS,
   type AuthorizationRelationship,
@@ -51,6 +52,21 @@ export function validateProviderSubmission(input: ProviderSubmissionInput): Subm
     errors.specialtyMakes = "Keep specialty makes under 300 characters.";
   }
 
+  if (input.yearsExperience.trim()) {
+    const yearsExperience = Number(input.yearsExperience);
+    if (!Number.isInteger(yearsExperience) || yearsExperience < 1 || yearsExperience > 100) {
+      errors.yearsExperience = "Enter whole years of experience between 1 and 100.";
+    }
+  }
+
+  if (input.spokenLanguages.some((language) => language !== "English" && language !== "Spanish")) {
+    errors.spokenLanguages = "Choose English, Spanish, or enter another language.";
+  }
+
+  if (input.otherLanguage.trim().length > 60) {
+    errors.otherLanguage = "Keep the other language under 60 characters.";
+  }
+
   if (input.locationKind === "physical") {
     if (!input.street.trim()) {
       errors.street = "Enter the shop street address.";
@@ -70,10 +86,39 @@ export function validateProviderSubmission(input: ProviderSubmissionInput): Subm
 
     if (!isValidZip(input.zip)) {
       errors.zip = "Enter a valid 5-digit ZIP code.";
+    } else if (!isLaunchZip(input.zip)) {
+      errors.zip = "Enter a Miami-Dade or Broward ZIP code.";
+    } else if (!hasLaunchZipCoordinates(input.zip)) {
+      errors.zip = "Distance matching is not available for this ZIP yet. Use a nearby residential ZIP.";
+    } else if (input.county && !getLaunchZipInfo(input.zip)?.counties.includes(input.county as LaunchCounty)) {
+      errors.zip = "The ZIP code does not match the selected county.";
     }
   } else if (input.locationKind === "mobile") {
-    if (splitZipValues(input.serviceZipCodes).length === 0 && input.serviceCounties.length === 0) {
-      errors.serviceZipCodes = "Enter service ZIP codes or choose a service county.";
+    const rawServiceZips = splitCommaValues(input.serviceZipCodes);
+    const serviceZips = splitZipValues(input.serviceZipCodes);
+    const hasRadiusInput = Boolean(input.serviceBaseZip.trim() || input.serviceRadiusMiles.trim());
+
+    if (rawServiceZips.length !== serviceZips.length) {
+      errors.serviceZipCodes = "Enter only comma-separated 5-digit ZIP codes.";
+    } else if (serviceZips.some((zip) => !isLaunchZip(zip) || !hasLaunchZipCoordinates(zip))) {
+      errors.serviceZipCodes = "Use Miami-Dade or Broward residential ZIP codes with available distance coverage.";
+    }
+
+    if (serviceZips.length === 0 && !hasRadiusInput) {
+      errors.serviceZipCodes = "Enter service ZIP codes or a base ZIP and service radius.";
+    }
+
+    if (hasRadiusInput) {
+      if (!isValidZip(input.serviceBaseZip) || !isLaunchZip(input.serviceBaseZip)) {
+        errors.serviceBaseZip = "Enter a Miami-Dade or Broward base ZIP code.";
+      } else if (!hasLaunchZipCoordinates(input.serviceBaseZip)) {
+        errors.serviceBaseZip = "Distance matching is not available for this base ZIP.";
+      }
+
+      const radius = Number(input.serviceRadiusMiles);
+      if (!Number.isFinite(radius) || radius < 1 || radius > 100) {
+        errors.serviceRadiusMiles = "Enter a service radius from 1 to 100 miles.";
+      }
     }
 
     if (input.serviceCounties.some((county) => !isLaunchCounty(county))) {
@@ -129,16 +174,27 @@ export function createSubmittedProviderRecord(
       email: input.email.trim().toLowerCase(),
       providerType: input.providerType as ProviderType,
       locationKind: input.locationKind as "physical" | "mobile",
-      street: optionalTrim(input.street),
-      city: optionalTrim(input.city),
-      county: input.county || undefined,
-      zip: optionalTrim(input.zip),
-      serviceZipCodes: splitZipValues(input.serviceZipCodes),
-      serviceCounties: input.serviceCounties,
+      street: input.locationKind === "physical" ? optionalTrim(input.street) : undefined,
+      city: input.locationKind === "physical" ? optionalTrim(input.city) : undefined,
+      county: input.locationKind === "physical" ? input.county || undefined : undefined,
+      zip: input.locationKind === "physical" ? optionalTrim(input.zip) : undefined,
+      serviceZipCodes:
+        input.locationKind === "mobile" ? Array.from(new Set(splitZipValues(input.serviceZipCodes))) : undefined,
+      serviceCounties: input.locationKind === "mobile" ? input.serviceCounties : undefined,
+      serviceBaseZip: input.locationKind === "mobile" ? optionalTrim(input.serviceBaseZip) : undefined,
+      serviceRadiusMiles:
+        input.locationKind === "mobile" && input.serviceRadiusMiles.trim()
+          ? Number(input.serviceRadiusMiles)
+          : undefined,
       services: input.services,
       allMakes: input.allMakes,
       makesServiced: input.allMakes ? undefined : splitCommaValues(input.makesServiced),
       specialtyMakes: splitCommaValues(input.specialtyMakes),
+      yearsExperience: input.yearsExperience.trim() ? Number(input.yearsExperience) : undefined,
+      spokenLanguages: uniqueCaseInsensitive([
+        ...input.spokenLanguages,
+        ...(input.otherLanguage.trim() ? [input.otherLanguage.trim()] : [])
+      ]),
       description: input.description.trim(),
       profileImageRef: undefined,
       registration: input.registrationNumber.trim()
@@ -199,6 +255,18 @@ function isAuthorizationRelationship(value: string): value is AuthorizationRelat
 function optionalTrim(value: string): string | undefined {
   const trimmed = value.trim();
   return trimmed || undefined;
+}
+
+function uniqueCaseInsensitive(values: string[]): string[] {
+  const seen = new Set<string>();
+  return values.filter((value) => {
+    const normalized = value.toLowerCase();
+    if (seen.has(normalized)) {
+      return false;
+    }
+    seen.add(normalized);
+    return true;
+  });
 }
 
 function buildSubmissionId(name: string, now: Date): string {

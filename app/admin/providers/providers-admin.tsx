@@ -116,6 +116,10 @@ export function AdminProvidersReview({
                 <dd>{review.vehicleCompatibility}</dd>
                 <dt>Location</dt>
                 <dd>{review.location}</dd>
+                <dt>Experience</dt>
+                <dd>{review.experience}</dd>
+                <dt>Languages</dt>
+                <dd>{review.languages}</dd>
                 <dt>Registration</dt>
                 <dd>{review.registration}</dd>
                 <dt>Description</dt>

@@ -75,6 +75,18 @@ test("vehicle and make information derives from provider data", () => {
   assert.equal(profile.specialtyMakesLine, "Specializes in Ford");
 });
 
+test("experience and language claims are clearly provider-reported", () => {
+  const provider = {
+    ...DEVELOPMENT_PROVIDERS[0],
+    yearsExperience: 14,
+    spokenLanguages: ["English", "Spanish"]
+  };
+  const profile = buildProviderProfileView(provider);
+
+  assert.equal(profile.experienceLine, "Provider-reported: 14 years");
+  assert.equal(profile.languagesLine, "Provider-reported: English, Spanish");
+});
+
 test("phone CTA is generated correctly from valid provider phone", () => {
   const provider = getPublicProviderById("dev-dade-ac-specialist");
   assert.ok(provider);

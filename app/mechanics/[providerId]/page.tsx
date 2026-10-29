@@ -139,6 +139,14 @@ export default async function MechanicProfilePage({ params, searchParams }: Mech
             <p>{profile.makesLine}</p>
             {profile.specialtyMakesLine ? <p className="muted-text">{profile.specialtyMakesLine}</p> : null}
           </div>
+
+          {(profile.experienceLine || profile.languagesLine) ? (
+            <div className="profile-card">
+              <h2>Provider details</h2>
+              {profile.experienceLine ? <p>{profile.experienceLine}</p> : null}
+              {profile.languagesLine ? <p>{profile.languagesLine}</p> : null}
+            </div>
+          ) : null}
         </section>
       </main>
     </>

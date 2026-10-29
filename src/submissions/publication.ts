@@ -30,13 +30,17 @@ export function convertSubmissionToProvider(record: ProviderSubmissionRecord): P
       record.locationKind === "mobile"
         ? {
             zipCodes: record.serviceZipCodes,
-            counties: record.serviceCounties
+            counties: record.serviceCounties,
+            baseZip: record.serviceBaseZip,
+            radiusMiles: record.serviceRadiusMiles
           }
         : undefined,
     services: record.services,
     allMakes: record.allMakes,
     makesServiced: record.makesServiced,
     specialtyMakes: record.specialtyMakes,
+    yearsExperience: record.yearsExperience,
+    spokenLanguages: record.spokenLanguages,
     contact: {
       phone: record.phone,
       email: record.email

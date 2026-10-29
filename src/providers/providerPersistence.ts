@@ -40,6 +40,8 @@ export interface ProviderRecordRow {
   all_makes: boolean;
   makes_serviced?: string[] | null;
   specialty_makes?: string[] | null;
+  years_experience?: number | null;
+  spoken_languages?: string[] | null;
   street?: string | null;
   city?: string | null;
   county?: ProviderSubmissionRecord["county"] | null;
@@ -66,7 +68,7 @@ export interface ProviderRecordRow {
 
 export type ProviderRecordInsertRow = Omit<
   ProviderRecordRow,
-  "website" | "latitude" | "longitude" | "service_base_zip" | "service_radius_miles" | "service_base_latitude" | "service_base_longitude" | "admin_notes" | "last_reviewed_by"
+  "website" | "latitude" | "longitude" | "service_base_latitude" | "service_base_longitude" | "admin_notes" | "last_reviewed_by"
 >;
 
 export type PublicProviderRow = Pick<
@@ -82,6 +84,8 @@ export type PublicProviderRow = Pick<
   | "all_makes"
   | "makes_serviced"
   | "specialty_makes"
+  | "years_experience"
+  | "spoken_languages"
   | "street"
   | "city"
   | "county"
@@ -115,6 +119,8 @@ export const PUBLIC_PROVIDER_ROW_FIELDS = [
   "all_makes",
   "makes_serviced",
   "specialty_makes",
+  "years_experience",
+  "spoken_languages",
   "street",
   "city",
   "county",
@@ -146,12 +152,16 @@ export function mapSubmissionToProviderRecordInsert(record: ProviderSubmissionRe
     all_makes: record.allMakes,
     makes_serviced: record.makesServiced ?? [],
     specialty_makes: record.specialtyMakes ?? [],
+    years_experience: record.yearsExperience ?? null,
+    spoken_languages: record.spokenLanguages ?? [],
     street: record.street ?? null,
     city: record.city ?? null,
     county: record.county ?? null,
     zip: record.zip ?? null,
     service_zip_codes: record.serviceZipCodes ?? [],
     service_counties: record.serviceCounties ?? [],
+    service_base_zip: record.serviceBaseZip ?? null,
+    service_radius_miles: record.serviceRadiusMiles ?? null,
     description: record.description,
     profile_image_ref: null,
     registration_value: record.registration?.value ?? null,
@@ -180,10 +190,14 @@ export function mapProviderRecordRowToSubmission(row: ProviderRecordRow): Provid
     zip: row.zip ?? undefined,
     serviceZipCodes: row.service_zip_codes ?? [],
     serviceCounties: row.service_counties ?? [],
+    serviceBaseZip: row.service_base_zip ?? undefined,
+    serviceRadiusMiles: row.service_radius_miles ?? undefined,
     services: row.services,
     allMakes: row.all_makes,
     makesServiced: row.makes_serviced ?? undefined,
     specialtyMakes: row.specialty_makes ?? undefined,
+    yearsExperience: row.years_experience ?? undefined,
+    spokenLanguages: row.spoken_languages ?? [],
     description: row.description,
     profileImageRef: undefined,
     registration:
@@ -236,6 +250,8 @@ export function mapPublicProviderRowToProvider(row: PublicProviderRow): Provider
     allMakes: row.all_makes,
     makesServiced: row.makes_serviced ?? undefined,
     specialtyMakes: row.specialty_makes ?? undefined,
+    yearsExperience: row.years_experience ?? undefined,
+    spokenLanguages: row.spoken_languages ?? [],
     contact: {
       phone: row.phone,
       email: row.email,
