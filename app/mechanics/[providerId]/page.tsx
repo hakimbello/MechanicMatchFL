@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { ContactActions } from "./contact-actions";
 import { ProfileAnalytics } from "./profile-analytics";
+import { ReviewSubmissionForm } from "./review-submission-form";
 import {
   buildProviderProfileView,
 } from "../../../src/profiles/providerProfiles.ts";
@@ -15,6 +16,8 @@ import {
   buildMechanicProfileNotFoundMetadata
 } from "../../../src/seo/metadata.ts";
 import { buildProviderStructuredData, serializeJsonLd } from "../../../src/seo/structuredData.ts";
+import { getPublicReviewPersistenceForRuntime } from "../../../src/reviews/runtimeReviewPersistence.ts";
+import type { PublicReview, PublicReviewAggregate } from "../../../src/reviews/reviewTypes.ts";
 
 type MechanicProfilePageProps = {
   params: Promise<{ providerId: string }>;
@@ -53,6 +56,18 @@ export default async function MechanicProfilePage({ params, searchParams }: Mech
     zip: context.zip
   });
   const structuredData = buildProviderStructuredData(provider);
+  let reviews: PublicReview[] = [];
+  let reviewAggregate: PublicReviewAggregate | null = null;
+  let reviewsAvailable = true;
+  try {
+    const reviewPersistence = getPublicReviewPersistenceForRuntime();
+    [reviews, reviewAggregate] = await Promise.all([
+      reviewPersistence.listPublicReviews(provider.id),
+      reviewPersistence.getPublicReviewAggregate(provider.id)
+    ]);
+  } catch {
+    reviewsAvailable = false;
+  }
 
   return (
     <>
@@ -147,6 +162,44 @@ export default async function MechanicProfilePage({ params, searchParams }: Mech
               {profile.languagesLine ? <p>{profile.languagesLine}</p> : null}
             </div>
           ) : null}
+        </section>
+
+        <section className="profile-card review-section" aria-labelledby="customer-reviews-title">
+          <div className="review-heading">
+            <div>
+              <p className="eyebrow">Customer feedback</p>
+              <h2 id="customer-reviews-title">Reviews</h2>
+            </div>
+            {reviewAggregate ? (
+              <p className="review-summary" aria-label={`${reviewAggregate.averageRating.toFixed(1)} out of 5 stars from ${reviewAggregate.reviewCount} reviews`}>
+                <strong>{reviewAggregate.averageRating.toFixed(1)} / 5</strong>
+                <span>{reviewAggregate.reviewCount} {reviewAggregate.reviewCount === 1 ? "review" : "reviews"}</span>
+              </p>
+            ) : null}
+          </div>
+
+          {!reviewsAvailable ? <p className="muted-text">Reviews are temporarily unavailable.</p> : null}
+          {reviewsAvailable && reviews.length === 0 ? <p className="muted-text">No published reviews yet.</p> : null}
+          {reviews.length ? (
+            <div className="review-list">
+              {reviews.map((review) => (
+                <article className="public-review" key={review.id}>
+                  <header>
+                    <strong>{review.reviewerName}</strong>
+                    <span>{review.rating} / 5 stars</span>
+                  </header>
+                  <p>{review.reviewText}</p>
+                  <p className="review-verification-label">Email ownership verified. Service not independently verified.</p>
+                </article>
+              ))}
+            </div>
+          ) : null}
+        </section>
+
+        <section className="profile-card" aria-labelledby="write-review-title">
+          <h2 id="write-review-title">Write a review</h2>
+          <p className="muted-text">Reviews require email ownership verification and administrator approval before publication.</p>
+          <ReviewSubmissionForm providerId={provider.id} />
         </section>
       </main>
     </>

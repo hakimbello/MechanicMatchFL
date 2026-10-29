@@ -60,6 +60,7 @@ select {
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
+textarea:focus-visible,
 a:focus-visible,
 .service-choice:has(input:focus-visible) {
   outline: 3px solid var(--focus);
@@ -676,6 +677,109 @@ textarea {
   border-color: var(--line);
   color: #8a94a5;
   cursor: not-allowed;
+}
+
+.review-section,
+.review-list,
+.review-form {
+  display: grid;
+  gap: 16px;
+}
+
+.review-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.review-summary {
+  display: grid;
+  margin: 0;
+  text-align: right;
+}
+
+.review-summary strong {
+  font-size: 1.25rem;
+}
+
+.review-summary span,
+.review-verification-label {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.public-review {
+  display: grid;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.public-review header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.public-review p {
+  margin: 0;
+}
+
+.rating-fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.rating-options {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 7px;
+}
+
+.rating-options label {
+  display: grid;
+  min-height: 52px;
+  place-items: center;
+  border: 1px solid #aeb8c8;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.rating-options label:has(input:checked) {
+  border-color: var(--accent);
+  background: #eef6ff;
+}
+
+.rating-options input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  min-height: 1px;
+  opacity: 0;
+}
+
+.rating-options label:has(input:focus-visible) {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.rating-options span {
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.review-honeypot {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
 }
 
 @media (max-width: 480px) {

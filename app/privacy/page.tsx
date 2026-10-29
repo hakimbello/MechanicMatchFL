@@ -64,6 +64,22 @@ export default function PrivacyPage() {
       </section>
 
       <section className="profile-card">
+        <h2>Customer Reviews</h2>
+        <p>
+          Review submissions collect a 1–5 star rating, written feedback, an optional public display name,
+          and a private email address. The email is used to confirm ownership through an expiring,
+          single-use link and to limit duplicate or automated submissions. Hashed request metadata is kept
+          privately for abuse prevention.
+        </p>
+        <p>
+          Reviews remain private until email ownership is confirmed and an authorized administrator
+          approves publication. Public reviews show only the chosen display name or Anonymous, rating,
+          written feedback, publication time, and an email-ownership label. Email verification does not
+          establish that a purchase, repair, or service relationship occurred.
+        </p>
+      </section>
+
+      <section className="profile-card">
         <h2>Analytics</h2>
         <p>
           MechanicMatchFL uses Vercel Web Analytics to understand whether the MVP funnel works: search,

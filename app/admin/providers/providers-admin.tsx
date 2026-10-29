@@ -67,6 +67,9 @@ export function AdminProvidersReview({
             Sign Out
           </button>
         </form>
+        <Link className="secondary-action" href="/admin/reviews">
+          Moderate Customer Reviews
+        </Link>
       </section>
 
       <section className="admin-layout">
