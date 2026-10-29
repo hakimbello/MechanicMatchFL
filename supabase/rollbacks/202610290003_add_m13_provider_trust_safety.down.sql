@@ -16,11 +16,48 @@ end $$;
 drop view if exists public.approved_public_provider_responses;
 
 create or replace view public.active_public_providers as
-select id,business_name as name,provider_type,'active'::public.provider_status as status,location_kind,phone,email,website,services,all_makes,makes_serviced,specialty_makes,street,city,county,zip,latitude,longitude,service_zip_codes,service_counties,service_base_zip,service_radius_miles,service_base_latitude,service_base_longitude,description,false as claimed_profile,false as verified,null::timestamptz as verified_at,years_experience,spoken_languages
+select
+  id,
+  business_name as name,
+  provider_type,
+  'active'::public.provider_status as status,
+  location_kind,
+  phone,
+  email,
+  website,
+  services,
+  all_makes,
+  makes_serviced,
+  specialty_makes,
+  street,
+  city,
+  county,
+  zip,
+  latitude,
+  longitude,
+  service_zip_codes,
+  service_counties,
+  service_base_zip,
+  service_radius_miles,
+  service_base_latitude,
+  service_base_longitude,
+  description,
+  false as claimed_profile,
+  false as verified,
+  null::timestamptz as verified_at,
+  years_experience,
+  spoken_languages
 from public.provider_records where status='active';
 
 create or replace view public.approved_public_reviews with (security_barrier=true) as
-select r.id,r.provider_id,r.rating,r.review_text,coalesce(nullif(r.reviewer_display_name,''),'Anonymous') as reviewer_name,true as email_verified,r.published_at
+select
+  r.id,
+  r.provider_id,
+  r.rating,
+  r.review_text,
+  coalesce(nullif(r.reviewer_display_name,''),'Anonymous') as reviewer_name,
+  true as email_verified,
+  r.published_at
 from public.customer_reviews r join public.provider_records p on p.id=r.provider_id
 where r.status='approved' and r.email_verified_at is not null and r.published_at is not null and p.status='active';
 

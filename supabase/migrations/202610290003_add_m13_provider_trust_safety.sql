@@ -319,6 +319,7 @@ create or replace function public.submit_safety_incident(p_provider_id text,p_ca
 returns text language plpgsql security definer set search_path = '' as $$
 begin
   if p_category not in ('unsafe-work','harassment','fraud','identity','other') or length(trim(p_description)) not between 40 and 4000 or p_ip_hash !~ '^[0-9a-f]{64}$' or p_email_hash !~ '^[0-9a-f]{64}$' or (p_reporter_name is not null and length(trim(p_reporter_name)) not between 1 and 100) or (p_reporter_email is not null and (lower(trim(p_reporter_email)) !~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$' or length(trim(p_reporter_email)) > 254)) or (p_provider_id is not null and not exists(select 1 from public.provider_records where id=p_provider_id)) then return 'invalid'; end if;
+  delete from public.safety_incident_attempts where created_at < now() - interval '30 days';
   perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_ip_hash, 13));
   perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(p_email_hash, 14));
   if (select count(*) from public.safety_incident_attempts where request_ip_hash=p_ip_hash and created_at>now()-interval '1 hour') >= 3 or (select count(*) from public.safety_incident_attempts where reporter_email_hash=p_email_hash and created_at>now()-interval '24 hours') >= 2 then return 'rate-limited'; end if;
@@ -388,20 +389,57 @@ begin
   if not found then return false; end if;
   update public.provider_suspension_appeals set status=p_decision::public.provider_appeal_status,decided_by=v_admin,decision_reason=trim(p_reason),decided_at=now() where id=p_appeal_id;
   insert into public.provider_suspension_appeal_history(appeal_id,status,actor_user_id,note) values(p_appeal_id,p_decision::public.provider_appeal_status,v_admin,trim(p_reason));
-  if p_decision='granted' then perform public.admin_reinstate_provider(v_appeal.provider_id,trim(p_reason)); end if;
+  if p_decision='granted' and not public.admin_reinstate_provider(v_appeal.provider_id,trim(p_reason)) then
+    raise exception 'Granted appeal could not reinstate its active suspension';
+  end if;
   return true;
 end;
 $$;
 
 create or replace view public.active_public_providers as
-select p.id,p.business_name as name,p.provider_type,'active'::public.provider_status as status,p.location_kind,p.phone,p.email,p.website,p.services,p.all_makes,p.makes_serviced,p.specialty_makes,p.street,p.city,p.county,p.zip,p.latitude,p.longitude,p.service_zip_codes,p.service_counties,p.service_base_zip,p.service_radius_miles,p.service_base_latitude,p.service_base_longitude,p.description,
+select
+  p.id,
+  p.business_name as name,
+  p.provider_type,
+  'active'::public.provider_status as status,
+  p.location_kind,
+  p.phone,
+  p.email,
+  p.website,
+  p.services,
+  p.all_makes,
+  p.makes_serviced,
+  p.specialty_makes,
+  p.street,
+  p.city,
+  p.county,
+  p.zip,
+  p.latitude,
+  p.longitude,
+  p.service_zip_codes,
+  p.service_counties,
+  p.service_base_zip,
+  p.service_radius_miles,
+  p.service_base_latitude,
+  p.service_base_longitude,
+  p.description,
   exists(select 1 from public.provider_claims c where c.provider_id=p.id and c.status='approved') as claimed_profile,
-  false as verified,null::timestamptz as verified_at,p.years_experience,p.spoken_languages
+  false as verified,
+  null::timestamptz as verified_at,
+  p.years_experience,
+  p.spoken_languages
 from public.provider_records p
 where p.status='active' and not exists(select 1 from public.provider_suspensions s where s.provider_id=p.id and s.status='active');
 
 create or replace view public.approved_public_reviews with (security_barrier=true) as
-select r.id,r.provider_id,r.rating,r.review_text,coalesce(nullif(r.reviewer_display_name,''),'Anonymous') as reviewer_name,true as email_verified,r.published_at
+select
+  r.id,
+  r.provider_id,
+  r.rating,
+  r.review_text,
+  coalesce(nullif(r.reviewer_display_name,''),'Anonymous') as reviewer_name,
+  true as email_verified,
+  r.published_at
 from public.customer_reviews r
 join public.provider_records p on p.id=r.provider_id
 where r.status='approved' and r.email_verified_at is not null and r.published_at is not null and p.status='active'
@@ -417,10 +455,6 @@ where pr.status='approved' and pr.published_at is not null and r.status='approve
   and c.status='approved' and p.status='active'
   and not exists(select 1 from public.provider_suspensions s where s.provider_id=p.id and s.status='active');
 
-revoke all on table public.active_public_providers from anon,authenticated;
-grant select on table public.active_public_providers to anon,authenticated;
-revoke all on table public.approved_public_reviews from anon,authenticated;
-grant select on table public.approved_public_reviews to anon,authenticated;
 revoke all on table public.approved_public_provider_responses from anon,authenticated;
 grant select on table public.approved_public_provider_responses to anon,authenticated;
 

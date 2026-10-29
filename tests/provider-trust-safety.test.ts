@@ -6,10 +6,83 @@ import { validateClaimEvidence, validatePrivateReason, validateProviderResponse,
 
 const migration = readFileSync("supabase/migrations/202610290003_add_m13_provider_trust_safety.sql", "utf8");
 const rollback = readFileSync("supabase/rollbacks/202610290003_add_m13_provider_trust_safety.down.sql", "utf8");
+const m11Migration = readFileSync("supabase/migrations/202610290001_add_m11_geography_profile_fields.sql", "utf8");
+const m12Migration = readFileSync("supabase/migrations/202610290002_add_m12_verified_customer_reviews.sql", "utf8");
+
+const ACTIVE_PROVIDER_COLUMNS = [
+  "id", "name", "provider_type", "status", "location_kind", "phone", "email", "website", "services", "all_makes",
+  "makes_serviced", "specialty_makes", "street", "city", "county", "zip", "latitude", "longitude",
+  "service_zip_codes", "service_counties", "service_base_zip", "service_radius_miles", "service_base_latitude",
+  "service_base_longitude", "description", "claimed_profile", "verified", "verified_at", "years_experience", "spoken_languages"
+];
+const APPROVED_REVIEW_COLUMNS = ["id", "provider_id", "rating", "review_text", "reviewer_name", "email_verified", "published_at"];
 
 function functionDefinition(name: string) {
   return migration.match(new RegExp(`create or replace function public\\.${name}[\\s\\S]*?\\$\\$;`, "i"))?.[0] ?? "";
 }
+
+function viewColumns(sql: string, name: string): string[] {
+  const definition = sql.match(new RegExp(`create or replace view public\\.${name}[\\s\\S]*?;`, "i"))?.[0] ?? "";
+  const selectStart = definition.search(/\bas\s+select\s+/i);
+  assert.notEqual(selectStart, -1, `${name} select list`);
+  const selectKeyword = definition.slice(selectStart).match(/\bas\s+select\s+/i)![0];
+  const body = definition.slice(selectStart + selectKeyword.length);
+  let depth = 0;
+  let quoted = false;
+  let fromIndex = -1;
+  for (let index = 0; index < body.length; index += 1) {
+    const char = body[index];
+    if (char === "'" && body[index - 1] !== "\\") quoted = !quoted;
+    if (quoted) continue;
+    if (char === "(") depth += 1;
+    if (char === ")") depth -= 1;
+    if (depth === 0 && /^from\b/i.test(body.slice(index))) { fromIndex = index; break; }
+  }
+  assert.notEqual(fromIndex, -1, `${name} FROM clause`);
+  const expressions: string[] = [];
+  let start = 0;
+  depth = 0;
+  quoted = false;
+  const list = body.slice(0, fromIndex);
+  for (let index = 0; index <= list.length; index += 1) {
+    const char = list[index];
+    if (char === "'" && list[index - 1] !== "\\") quoted = !quoted;
+    if (!quoted && char === "(") depth += 1;
+    if (!quoted && char === ")") depth -= 1;
+    if (index === list.length || (!quoted && depth === 0 && char === ",")) {
+      expressions.push(list.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+  return expressions.filter(Boolean).map((expression) => {
+    const alias = expression.match(/\bas\s+([a-z_][a-z0-9_]*)\s*$/i)?.[1];
+    if (alias) return alias.toLowerCase();
+    return expression.match(/([a-z_][a-z0-9_]*)\s*$/i)?.[1].toLowerCase() ?? "";
+  });
+}
+
+test("M13 preserves the exact M11 active provider view ordinal contract", () => {
+  assert.deepEqual(viewColumns(m11Migration, "active_public_providers"), ACTIVE_PROVIDER_COLUMNS);
+  assert.deepEqual(viewColumns(migration, "active_public_providers"), ACTIVE_PROVIDER_COLUMNS);
+  assert.deepEqual(viewColumns(rollback, "active_public_providers"), ACTIVE_PROVIDER_COLUMNS);
+  assert.equal(ACTIVE_PROVIDER_COLUMNS.filter((column) => column === "claimed_profile").length, 1);
+  assert.ok(ACTIVE_PROVIDER_COLUMNS.indexOf("verified_at") < ACTIVE_PROVIDER_COLUMNS.indexOf("years_experience"));
+});
+
+test("M13 preserves the exact M12 approved review view ordinal contract", () => {
+  assert.deepEqual(viewColumns(m12Migration, "approved_public_reviews"), APPROVED_REVIEW_COLUMNS);
+  assert.deepEqual(viewColumns(migration, "approved_public_reviews"), APPROVED_REVIEW_COLUMNS);
+  assert.deepEqual(viewColumns(rollback, "approved_public_reviews"), APPROVED_REVIEW_COLUMNS);
+  assert.doesNotMatch(migration, /create or replace view public\.public_provider_review_aggregates/i);
+});
+
+test("existing view grants and dependencies are preserved in place", () => {
+  assert.doesNotMatch(migration, /drop view[^;]*active_public_providers/i);
+  assert.doesNotMatch(migration, /drop view[^;]*approved_public_reviews/i);
+  assert.doesNotMatch(migration, /revoke all on table public\.(active_public_providers|approved_public_reviews)/i);
+  assert.doesNotMatch(migration, /grant select on table public\.(active_public_providers|approved_public_reviews)/i);
+  assert.match(migration, /grant select on table public\.approved_public_provider_responses to anon,authenticated/i);
+});
 
 test("provider ownership evidence and private content enforce bounded validation", () => {
   assert.ok(validateClaimEvidence("short"));
@@ -35,6 +108,8 @@ test("claims bind ownership to auth.uid and never trust a client-supplied user i
   assert.match(claim, /status = 'active'/i);
   assert.match(migration, /provider_claims_one_approved_owner_idx[\s\S]*where status = 'approved'/i);
   assert.match(migration, /references auth\.users\(id\)/i);
+  assert.match(migration, /provider_claims_one_current_request_idx/i);
+  assert.match(claim, /exception when unique_violation then return false/i);
 });
 
 test("claim approval is admin-only and rejected, disabled, or revoked claims cannot act", () => {
@@ -45,6 +120,8 @@ test("claim approval is admin-only and rejected, disabled, or revoked claims can
   assert.match(ownership, /c\.status = 'approved'/i);
   assert.match(ownership, /c\.auth_user_id = \(select auth\.uid\(\)\)/i);
   assert.doesNotMatch(ownership, /pending|rejected|disabled|revoked/i);
+  const adminDefinition = readFileSync("supabase/migrations/202609160001_prepare_provider_persistence.sql", "utf8");
+  assert.match(adminDefinition, /is_mechanicmatch_admin[\s\S]*disabled_at is null/i);
 });
 
 test("provider replies require ownership, an active provider, and an approved review", () => {
@@ -89,6 +166,7 @@ test("anonymous safety intake is rate limited transactionally and remains confid
   assert.match(migration, /revoke all on table public\.safety_incidents from anon, authenticated/i);
   assert.doesNotMatch(migration, /grant select on table public\.safety_incidents/i);
   assert.doesNotMatch(migration, /create or replace view[\s\S]*reporter_email/i);
+  assert.match(safety, /delete from public\.safety_incident_attempts where created_at < now\(\) - interval '30 days'/i);
 });
 
 test("suspension is admin-controlled, audited, and not rating-triggered", () => {
@@ -115,6 +193,7 @@ test("appeals require approved ownership and an active suspension with audit his
   assert.match(appeal, /provider_suspension_appeal_history/i);
   assert.match(decide, /public\.is_mechanicmatch_admin\(\)/i);
   assert.match(decide, /admin_reinstate_provider/i);
+  assert.match(decide, /raise exception 'Granted appeal could not reinstate its active suspension'/i);
 });
 
 test("all M13 security-definer functions use an empty search path", () => {
@@ -127,6 +206,21 @@ test("all M13 security-definer functions use an empty search path", () => {
   }
   assert.match(migration, /grant execute on function public\.submit_safety_incident[\s\S]*to service_role/i);
   assert.doesNotMatch(migration, /grant execute on function public\.submit_safety_incident[\s\S]*to anon/i);
+});
+
+test("M13 EXECUTE grants are limited to the required authenticated and service roles", () => {
+  const authenticatedFunctions = [
+    "has_approved_provider_claim", "submit_provider_claim", "submit_provider_review_response",
+    "submit_provider_review_dispute", "submit_provider_suspension_appeal", "admin_review_provider_claim",
+    "admin_moderate_provider_response", "admin_update_provider_dispute", "admin_update_safety_incident",
+    "admin_suspend_provider", "admin_reinstate_provider", "admin_decide_provider_appeal"
+  ];
+  for (const name of authenticatedFunctions) {
+    assert.match(migration, new RegExp(`grant execute on function public\\.${name}\\([^;]+\\) to authenticated`, "i"), name);
+    assert.doesNotMatch(migration, new RegExp(`grant execute on function public\\.${name}\\([^;]+\\) to (anon|service_role)`, "i"), name);
+  }
+  assert.match(migration, /grant execute on function public\.submit_safety_incident\([^;]+\) to service_role/i);
+  assert.doesNotMatch(migration, /grant execute on function public\.submit_safety_incident\([^;]+\) to (anon|authenticated)/i);
 });
 
 test("M13 private tables use RLS and expose no direct authenticated writes", () => {
