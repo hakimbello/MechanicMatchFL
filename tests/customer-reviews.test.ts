@@ -57,7 +57,9 @@ test("only active providers accept reviews and duplicates are blocked", async ()
   assert.equal((await inactive.createPendingReview(pendingInput())).outcome, "inactive-provider");
 
   const persistence = new InMemoryReviewPersistence({ [validInput.providerId]: "Active Garage" });
-  assert.equal((await persistence.createPendingReview(pendingInput())).outcome, "created");
+  const created = await persistence.createPendingReview(pendingInput());
+  assert.equal(created.outcome, "created");
+  await persistence.markVerificationEmailSent(created.reviewId!, "c".repeat(64), "accepted");
   assert.equal((await persistence.createPendingReview(pendingInput({ tokenHash: "d".repeat(64) }))).outcome, "duplicate");
 });
 
@@ -148,6 +150,8 @@ test("M12 migration enforces token, rate-limit, moderation, and rollback safety"
   assert.match(migration, />= 3/);
   assert.match(migration, /status = 'pending-moderation'/);
   assert.match(migration, /disabled_at is null/);
+  assert.match(migration, /pg_advisory_xact_lock/);
+  assert.match(migration, /verification_email_sent_at is null or v_existing_review\.verification_expires_at <= now\(\)/i);
   assert.match(rollback, /Cannot roll back M12 while customer reviews exist/);
 });
 
@@ -156,6 +160,7 @@ test("email adapter and UI never claim service verification", () => {
   const form = readFileSync("app/mechanics/[providerId]/review-submission-form.tsx", "utf8");
   const adminAction = readFileSync("app/admin/reviews/actions.ts", "utf8");
   assert.match(email, /Authorization: `Bearer \$\{config\.apiKey\}`/);
+  assert.match(email, /"Idempotency-Key": message\.idempotencyKey/);
   assert.match(email, /Email verification confirms email ownership only/);
   assert.doesNotMatch(email, /console\./);
   assert.match(form, /Service not independently verified|does not verify a purchase, completed repair, or service relationship/);

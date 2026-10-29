@@ -61,7 +61,25 @@ export class InMemoryReviewPersistence implements ReviewPersistence {
       return { outcome: "rate-limited" as const };
     }
     this.attempts.push({ emailHash: input.emailHash, ipHash: input.ipHash, createdAt: now });
-    if (this.records.some((record) => record.providerId === input.providerId && record.reviewerEmail === input.reviewerEmail)) {
+    const existing = this.records.find(
+      (record) => record.providerId === input.providerId && record.reviewerEmail === input.reviewerEmail
+    );
+    if (existing && existing.status === "pending-email" && (
+      !existing.verificationEmailSentAt || new Date(existing.verificationExpiresAt).getTime() <= now
+    )) {
+      Object.assign(existing, {
+        rating: input.rating,
+        reviewText: input.reviewText,
+        displayName: input.displayName,
+        verificationExpiresAt: input.verificationExpiresAt,
+        verificationEmailSentAt: undefined,
+        deliveryId: undefined,
+        tokenHash: input.tokenHash,
+        createdAt: new Date(now).toISOString()
+      });
+      return { outcome: "created" as const, reviewId: existing.id, providerName };
+    }
+    if (existing) {
       return { outcome: "duplicate" as const };
     }
     const id = `review-${this.records.length + 1}`;

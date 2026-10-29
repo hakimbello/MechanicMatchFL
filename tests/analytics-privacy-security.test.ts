@@ -333,12 +333,14 @@ test("security headers configuration behaves as expected", () => {
 
 test("no secrets are intentionally exposed through analytics configuration", () => {
   const layout = readFileSync("app/layout.tsx", "utf8");
+  const siteAnalytics = readFileSync("app/site-analytics.tsx", "utf8");
   const packageJson = readFileSync("package.json", "utf8");
 
   assert.match(packageJson, /@vercel\/analytics/);
-  assert.match(layout, /<Analytics \/>/);
-  assert.equal(layout.includes("dsn="), false);
-  assert.equal(layout.includes("endpoint="), false);
+  assert.match(layout, /<SiteAnalytics \/>/);
+  assert.match(siteAnalytics, /<Analytics \/>/);
+  assert.equal(`${layout}${siteAnalytics}`.includes("dsn="), false);
+  assert.equal(`${layout}${siteAnalytics}`.includes("endpoint="), false);
 });
 
 test("unsafe provider website does not produce a public contact action", () => {

@@ -14,3 +14,7 @@ export function hashReviewVerificationToken(token: string): string {
 export function hashReviewAbuseValue(value: string, key: string): string {
   return createHmac("sha256", key).update(value, "utf8").digest("hex");
 }
+
+export function createModerationAuthorizationHash(): string {
+  return randomBytes(32).toString("hex");
+}

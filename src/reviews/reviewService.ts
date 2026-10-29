@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { ProviderAdminIdentity } from "../providers/providerPersistence.ts";
+import { deliverReviewVerification } from "./reviewDelivery.ts";
 import {
   createResendReviewEmailSender,
   getReviewDeliveryConfig,
@@ -58,13 +59,21 @@ export async function submitCustomerReview(
   }
 
   const verificationUrl = new URL("/reviews/verify", config.siteUrl);
-  verificationUrl.searchParams.set("token", token);
-  try {
-    const sender = options.emailSender ?? createResendReviewEmailSender(config);
-    const delivery = await sender.sendVerificationEmail({ recipient: email, providerName: result.providerName, verificationUrl: verificationUrl.toString() });
-    await persistence.markVerificationEmailSent(result.reviewId, tokenHash, delivery.deliveryId);
-  } catch {
-    await persistence.discardUndeliveredReview(result.reviewId, tokenHash).catch(() => undefined);
+  verificationUrl.hash = `token=${token}`;
+  const sender = options.emailSender ?? createResendReviewEmailSender(config);
+  const delivered = await deliverReviewVerification(
+    result.reviewId,
+    tokenHash,
+    {
+      recipient: email,
+      providerName: result.providerName,
+      verificationUrl: verificationUrl.toString(),
+      idempotencyKey: `review-verification-${tokenHash}`
+    },
+    sender,
+    persistence
+  );
+  if (!delivered) {
     return { ok: false, formError: "The verification email could not be delivered. Please try again later." };
   }
 

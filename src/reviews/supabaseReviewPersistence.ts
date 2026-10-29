@@ -11,13 +11,15 @@ import {
   type VerifyReviewOutcome
 } from "./reviewPersistence.ts";
 import type { PublicReview, PublicReviewAggregate, ReviewModerationInput, ReviewSubmissionRecord, ReviewStatus } from "./reviewTypes.ts";
+import { createModerationAuthorizationHash } from "./reviewSecurity.ts";
 
 type RpcResultRow = { outcome: string; review_id?: string | null; provider_name?: string | null };
 
 export class SupabaseReviewPersistence implements ReviewPersistence {
   constructor(
     private readonly privilegedClient: SupabaseClient,
-    private readonly publicClient: SupabaseClient = privilegedClient
+    private readonly publicClient: SupabaseClient = privilegedClient,
+    private readonly authenticatedAdminClient?: SupabaseClient
   ) {}
 
   async createPendingReview(input: CreateReviewRecordInput) {
@@ -118,11 +120,22 @@ export class SupabaseReviewPersistence implements ReviewPersistence {
   }
 
   async moderateReview(input: ReviewModerationInput, admin: ProviderAdminIdentity) {
+    if (!this.authenticatedAdminClient) throw new ReviewPersistenceError();
+    const authorizationHash = createModerationAuthorizationHash();
+    const { error: authorizationError } = await this.authenticatedAdminClient
+      .from("customer_review_moderation_authorizations")
+      .insert({
+        authorization_hash: authorizationHash,
+        admin_user_id: admin.userId,
+        expires_at: new Date(Date.now() + 2 * 60 * 1000).toISOString()
+      });
+    if (authorizationError) throw new ReviewPersistenceError();
+
     const { data, error } = await this.privilegedClient.rpc("moderate_customer_review", {
       p_review_id: input.reviewId,
       p_decision: input.decision,
       p_reason: input.reason.trim(),
-      p_admin_id: admin.userId
+      p_authorization_hash: authorizationHash
     });
     if (error || data !== true) throw new ReviewPersistenceError();
   }

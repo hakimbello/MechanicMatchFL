@@ -8,7 +8,7 @@ end $$;
 
 create table if not exists public.customer_reviews (
   id uuid primary key default gen_random_uuid(),
-  provider_id uuid not null references public.provider_records(id) on delete restrict,
+  provider_id text not null references public.provider_records(id) on delete restrict,
   rating smallint not null check (rating between 1 and 5),
   review_text text not null check (length(trim(review_text)) between 20 and 2000),
   reviewer_display_name text check (reviewer_display_name is null or length(trim(reviewer_display_name)) between 1 and 80),
@@ -44,6 +44,16 @@ create table if not exists public.customer_review_submission_attempts (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.customer_review_moderation_authorizations (
+  authorization_hash text primary key check (authorization_hash ~ '^[0-9a-f]{64}$'),
+  admin_user_id uuid not null references public.admin_users(user_id) on delete cascade,
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now(),
+  constraint customer_review_moderation_authorization_lifetime check (
+    expires_at > created_at and expires_at <= created_at + interval '5 minutes'
+  )
+);
+
 create index if not exists customer_reviews_provider_status_idx on public.customer_reviews(provider_id, status);
 create index if not exists customer_reviews_moderation_queue_idx on public.customer_reviews(created_at) where status = 'pending-moderation';
 create index if not exists customer_review_attempts_email_idx on public.customer_review_submission_attempts(reviewer_email_hash, created_at);
@@ -55,7 +65,7 @@ before update on public.customer_reviews
 for each row execute function public.touch_updated_at();
 
 create or replace function public.submit_customer_review(
-  p_provider_id uuid,
+  p_provider_id text,
   p_rating smallint,
   p_review_text text,
   p_reviewer_email text,
@@ -74,6 +84,7 @@ declare
   v_attempt_id bigint;
   v_review_id uuid;
   v_provider_name text;
+  v_existing_review public.customer_reviews%rowtype;
 begin
   if p_rating not between 1 and 5
     or length(trim(p_review_text)) not between 20 and 2000
@@ -115,7 +126,35 @@ begin
     return;
   end if;
 
-  if exists (select 1 from public.customer_reviews where provider_id = p_provider_id and reviewer_email = p_reviewer_email) then
+  select * into v_existing_review
+  from public.customer_reviews
+  where provider_id = p_provider_id and reviewer_email = p_reviewer_email
+  for update;
+
+  if found then
+    if v_existing_review.status = 'pending-email'
+      and (v_existing_review.verification_email_sent_at is null or v_existing_review.verification_expires_at <= now())
+    then
+      update public.customer_reviews
+      set rating = p_rating,
+          review_text = trim(p_review_text),
+          reviewer_display_name = nullif(trim(p_display_name), ''),
+          reviewer_email_hash = p_email_hash,
+          verification_token_hash = p_token_hash,
+          verification_expires_at = p_token_expires_at,
+          verification_email_sent_at = null,
+          verification_delivery_id = null,
+          email_verified_at = null,
+          token_consumed_at = null,
+          created_at = now()
+      where id = v_existing_review.id
+      returning id into v_review_id;
+
+      update public.customer_review_submission_attempts set review_id = v_review_id where id = v_attempt_id;
+      return query select 'created'::text, v_review_id, v_provider_name;
+      return;
+    end if;
+
     return query select 'duplicate'::text, null::uuid, null::text;
     return;
   end if;
@@ -171,16 +210,27 @@ create or replace function public.moderate_customer_review(
   p_review_id uuid,
   p_decision text,
   p_reason text,
-  p_admin_id uuid
+  p_authorization_hash text
 )
 returns boolean language plpgsql security definer set search_path = '' as $$
+declare v_admin_id uuid;
 begin
   if p_decision not in ('approved', 'rejected') or length(trim(p_reason)) not between 10 and 500 then return false; end if;
-  if not exists (select 1 from public.admin_users where user_id = p_admin_id and disabled_at is null) then return false; end if;
+
+  delete from public.customer_review_moderation_authorizations where expires_at <= now();
+  select admin_user_id into v_admin_id
+  from public.customer_review_moderation_authorizations
+  where authorization_hash = p_authorization_hash and expires_at > now()
+  for update;
+  if not found then return false; end if;
+
+  delete from public.customer_review_moderation_authorizations
+  where authorization_hash = p_authorization_hash;
+  if not exists (select 1 from public.admin_users where user_id = v_admin_id and disabled_at is null) then return false; end if;
 
   update public.customer_reviews
   set status = p_decision::public.customer_review_status,
-      moderated_by = p_admin_id,
+      moderated_by = v_admin_id,
       moderated_at = now(),
       moderation_reason = trim(p_reason),
       published_at = case when p_decision = 'approved' then now() else null end
@@ -213,9 +263,11 @@ group by provider_id;
 
 alter table public.customer_reviews enable row level security;
 alter table public.customer_review_submission_attempts enable row level security;
+alter table public.customer_review_moderation_authorizations enable row level security;
 
 revoke all on table public.customer_reviews from anon, authenticated;
 revoke all on table public.customer_review_submission_attempts from anon, authenticated;
+revoke all on table public.customer_review_moderation_authorizations from anon, authenticated;
 revoke all on table public.approved_public_reviews from anon, authenticated;
 revoke all on table public.public_provider_review_aggregates from anon, authenticated;
 grant select on table public.approved_public_reviews to anon, authenticated;
@@ -225,18 +277,29 @@ create policy "mechanicmatch admins can read customer reviews"
 on public.customer_reviews for select to authenticated
 using ((select public.is_mechanicmatch_admin()));
 
-revoke execute on function public.submit_customer_review(uuid, smallint, text, text, text, text, text, text, timestamptz) from public, anon, authenticated;
+create policy "enabled admins can create bound review moderation authorizations"
+on public.customer_review_moderation_authorizations for insert to authenticated
+with check (
+  admin_user_id = (select auth.uid())
+  and (select public.is_mechanicmatch_admin())
+);
+
+grant insert (authorization_hash, admin_user_id, expires_at)
+on table public.customer_review_moderation_authorizations to authenticated;
+
+revoke execute on function public.submit_customer_review(text, smallint, text, text, text, text, text, text, timestamptz) from public, anon, authenticated;
 revoke execute on function public.mark_customer_review_email_sent(uuid, text, text) from public, anon, authenticated;
 revoke execute on function public.discard_undelivered_customer_review(uuid, text) from public, anon, authenticated;
 revoke execute on function public.verify_customer_review_email(text) from public, anon, authenticated;
-revoke execute on function public.moderate_customer_review(uuid, text, text, uuid) from public, anon, authenticated;
-grant execute on function public.submit_customer_review(uuid, smallint, text, text, text, text, text, text, timestamptz) to service_role;
+revoke execute on function public.moderate_customer_review(uuid, text, text, text) from public, anon, authenticated;
+grant execute on function public.submit_customer_review(text, smallint, text, text, text, text, text, text, timestamptz) to service_role;
 grant execute on function public.mark_customer_review_email_sent(uuid, text, text) to service_role;
 grant execute on function public.discard_undelivered_customer_review(uuid, text) to service_role;
 grant execute on function public.verify_customer_review_email(text) to service_role;
-grant execute on function public.moderate_customer_review(uuid, text, text, uuid) to service_role;
+grant execute on function public.moderate_customer_review(uuid, text, text, text) to service_role;
 
 comment on table public.customer_reviews is 'Private customer reviews, reviewer identity, email verification, and moderation history.';
 comment on table public.customer_review_submission_attempts is 'Private hashed abuse metadata used for durable server-side review rate limits.';
+comment on table public.customer_review_moderation_authorizations is 'Private, short-lived, single-use proof binding moderation to an authenticated enabled administrator.';
 comment on view public.approved_public_reviews is 'Approved reviews for active providers only. Excludes email, tokens, IP hashes, delivery data, moderation reasons, and administrator identity.';
 comment on column public.approved_public_reviews.email_verified is 'Email ownership verified only; not proof of purchase, completed repair, or service relationship.';

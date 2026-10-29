@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { verifyReviewEmailAction } from "./actions";
+import { VerificationTokenForm } from "./verification-token-form";
 
-export const metadata: Metadata = { title: "Verify review email", robots: { index: false, follow: false } };
+export const metadata: Metadata = {
+  title: "Verify review email",
+  robots: { index: false, follow: false },
+  referrer: "no-referrer"
+};
 
-export default async function VerifyReviewPage({ searchParams }: { searchParams: Promise<{ token?: string; status?: string }> }) {
-  const { token, status } = await searchParams;
+export default async function VerifyReviewPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
+  const { status } = await searchParams;
   const message = statusMessage(status);
   return (
     <main className="page-shell provider-flow">
@@ -18,10 +22,7 @@ export default async function VerifyReviewPage({ searchParams }: { searchParams:
           <>
             <p className="intro">Confirm email ownership to place your unpublished review in the moderation queue.</p>
             <p className="muted-text">This confirms email ownership only. It does not verify a purchase, completed repair, or service relationship.</p>
-            <form action={verifyReviewEmailAction}>
-              <input name="token" type="hidden" value={token ?? ""} />
-              <button className="primary-action" type="submit">Verify email</button>
-            </form>
+            <VerificationTokenForm />
           </>
         )}
       </section>

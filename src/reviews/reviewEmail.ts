@@ -9,6 +9,7 @@ export interface ReviewVerificationEmail {
   recipient: string;
   providerName: string;
   verificationUrl: string;
+  idempotencyKey: string;
 }
 
 export interface ReviewEmailSender {
@@ -64,7 +65,8 @@ export function createResendReviewEmailSender(config = getReviewDeliveryConfig()
         method: "POST",
         headers: {
           Authorization: `Bearer ${config.apiKey}`,
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "Idempotency-Key": message.idempotencyKey
         },
         body: JSON.stringify({
           from: config.from,

@@ -24,11 +24,37 @@ hash, and HMAC-hashes email/IP rate-limit identifiers. The database then
 enforces active-provider eligibility, one review per provider/email, five
 attempts per IP per hour, and three attempts per email per day.
 
+On Vercel, the rate-limit identity accepts only one syntactically valid address
+from Vercel's overwritten `x-vercel-forwarded-for` header. Ordinary
+`x-forwarded-for` is ignored. Non-Vercel, missing, malformed, and proxy-chain
+inputs use one conservative shared bucket. Per-identity advisory transaction
+locks serialize the database check and counter insert.
+
 Opening the email link does not consume it. The reviewer explicitly submits the
 verification page, and the database atomically checks expiry and prior use.
 Verified reviews remain private until an allow-listed Supabase Auth administrator
 records an approval and private reason. Email verification is never described as
 purchase, repair, or service verification.
+
+The email URL carries its token in the fragment, which browsers do not send in
+the HTTP request. The verification page removes the fragment immediately and
+sets a `no-referrer` policy before the reviewer submits the token.
+
+Moderation uses a two-step authorization contract. The authenticated admin
+session inserts a two-minute, RLS-bound nonce for its own `auth.uid()`. The
+service-role moderation RPC consumes that nonce once, derives attribution from
+it, and re-checks that the allowlist row is still enabled. The RPC never accepts
+an administrator ID from its caller.
+
+## Delivery recovery
+
+A submission succeeds only after the email provider accepts the message and the
+database marks that exact token as sent. Provider rejection, mark failure, and
+cleanup failure never produce a success response. Unsent or expired
+`pending-email` state can be replaced atomically under the same advisory locks,
+which invalidates the older token and permits a legitimate retry. A sent,
+unexpired token remains protected by duplicate enforcement. Resend receives an
+idempotency key derived from the token hash.
 
 ## Rollback
 

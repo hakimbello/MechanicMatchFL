@@ -1,5 +1,7 @@
 import "server-only";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import { MissingSupabaseConfigurationError } from "../config/supabaseEnvironment.ts";
 import {
   createSupabasePrivilegedDataClient,
@@ -12,9 +14,16 @@ import { SupabaseReviewPersistence } from "./supabaseReviewPersistence.ts";
 
 const developmentPersistence = new InMemoryReviewPersistence();
 
-export function getReviewPersistenceForRuntime(env: Pick<NodeJS.ProcessEnv, "NODE_ENV"> = process.env): ReviewPersistence {
+export function getReviewPersistenceForRuntime(
+  env: Pick<NodeJS.ProcessEnv, "NODE_ENV"> = process.env,
+  authenticatedAdminClient?: SupabaseClient
+): ReviewPersistence {
   if (isSupabasePrivilegedDataConfigured()) {
-    return new SupabaseReviewPersistence(createSupabasePrivilegedDataClient(), createSupabasePublicDataClient());
+    return new SupabaseReviewPersistence(
+      createSupabasePrivilegedDataClient(),
+      createSupabasePublicDataClient(),
+      authenticatedAdminClient
+    );
   }
   if (env.NODE_ENV === "production") throw new MissingSupabaseConfigurationError(["SUPABASE_SECRET_KEY"]);
   return developmentPersistence;
