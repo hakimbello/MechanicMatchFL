@@ -23,7 +23,16 @@ import { createSubmittedProviderRecord } from "../src/submissions/validation.ts"
 const migration = readFileSync("supabase/migrations/202609160001_prepare_provider_persistence.sql", "utf8");
 const m11Migration = readFileSync("supabase/migrations/202610290001_add_m11_geography_profile_fields.sql", "utf8");
 const m11Rollback = readFileSync("supabase/rollbacks/202610290001_add_m11_geography_profile_fields.down.sql", "utf8");
+const m11Runbook = readFileSync("docs/m11-migration-runbook.md", "utf8");
 const envExample = readFileSync(".env.example", "utf8");
+
+function activePublicViewDefinition(sql: string): string {
+  const match = sql.match(
+    /create or replace view public\.active_public_providers as\s+(select[\s\S]*?from public\.provider_records\s+where status = 'active';)/i
+  );
+  assert.ok(match, "Expected active_public_providers view definition");
+  return match[1];
+}
 
 const validSubmission: ProviderSubmissionInput = {
   ...EMPTY_PROVIDER_SUBMISSION,
@@ -179,25 +188,56 @@ test("public projection field list excludes admin and authorization fields", () 
 });
 
 test("M11 migration is additive, active-only, and preserves private boundaries", () => {
+  const view = activePublicViewDefinition(m11Migration);
+
   assert.match(m11Migration, /add column if not exists years_experience/);
   assert.match(m11Migration, /add column if not exists spoken_languages/);
   assert.match(m11Migration, /service_base_zip is not null and service_radius_miles is not null/);
-  assert.match(m11Migration, /where status = 'active'/);
-  assert.match(m11Migration, /revoke all on table public\.active_public_providers from anon, authenticated/);
-  assert.match(m11Migration, /grant select on table public\.active_public_providers to anon, authenticated/);
+  assert.match(view, /where status = 'active'/);
+  assert.match(view, /null::timestamptz as verified_at,\s+years_experience,\s+spoken_languages/);
   assert.equal(/disable row level security/i.test(m11Migration), false);
-  assert.equal(/authorization_relationship|registration_value|admin_notes|last_reviewed_by/.test(m11Migration), false);
+  assert.equal(/authorization_relationship|registration_value|admin_notes|last_reviewed_by/.test(view), false);
   assert.equal(/alter table public\.admin_users|is_mechanicmatch_admin/.test(m11Migration), false);
 });
 
-test("M11 rollback restores the prior projection and refuses lossy radius rollback", () => {
+test("M11 view replacement preserves grants, options, rules, and dependencies", () => {
+  assert.match(m11Migration, /create or replace view public\.active_public_providers/);
+  assert.equal(/drop view/i.test(m11Migration), false);
+  assert.equal(/revoke .*active_public_providers/i.test(m11Migration), false);
+  assert.equal(/grant .*active_public_providers/i.test(m11Migration), false);
+  assert.equal(/^\s*(begin|commit);/im.test(m11Migration), false);
+  assert.match(m11Runbook, /preserves the view object,\s+ownership, grants, options, comments, non-SELECT rules, and dependent objects/);
+  assert.match(m11Runbook, /migration runner applies each migration file as one\s+transaction/);
+  assert.match(m11Runbook, /explicit transaction control can break the runner's atomicity/);
+});
+
+test("M11 radius constraint enforces new writes and has an explicit legacy validation plan", () => {
+  assert.match(m11Migration, /provider_records_mobile_radius_pair check[\s\S]*?not valid;/i);
+  assert.match(m11Migration, /\(service_base_zip is null\) <> \(service_radius_miles is null\)/);
+  assert.match(m11Migration, /validate constraint provider_records_mobile_radius_pair/);
+  assert.match(m11Runbook, /invalid_radius_pair_count/);
+  assert.match(m11Runbook, /Never infer a radius or base ZIP/);
+  assert.match(m11Runbook, /convalidated/);
+});
+
+test("M11 rollback preserves the view object and refuses silent data loss", () => {
+  const view = activePublicViewDefinition(m11Rollback);
+
   assert.match(m11Rollback, /Cannot roll back M11 while radius-only mobile providers exist/);
+  assert.match(m11Rollback, /Cannot roll back M11 while provider-reported experience or language values exist/);
   assert.match(m11Rollback, /drop column if exists years_experience/);
   assert.match(m11Rollback, /drop column if exists spoken_languages/);
   assert.match(m11Rollback, /cardinality\(service_zip_codes\) > 0 or cardinality\(service_counties\) > 0/);
-  assert.match(m11Rollback, /where status = 'active'/);
-  assert.match(m11Rollback, /revoke all on table public\.active_public_providers from anon, authenticated/);
-  assert.match(m11Rollback, /grant select on table public\.active_public_providers to anon, authenticated/);
+  assert.match(view, /where status = 'active'/);
+  assert.match(view, /null::smallint as years_experience/);
+  assert.match(view, /null::text\[\] as spoken_languages/);
+  assert.equal(/drop view/i.test(m11Rollback), false);
+  assert.equal(/revoke .*active_public_providers/i.test(m11Rollback), false);
+  assert.equal(/grant .*active_public_providers/i.test(m11Rollback), false);
+  assert.equal(/^\s*(begin|commit);/im.test(m11Rollback), false);
+  assert.match(m11Runbook, /promote the reviewed down SQL to a new timestamped migration/);
+  assert.match(m11Runbook, /Do not paste or execute\s+it piecemeal/);
+  assert.match(m11Runbook, /export affected profile values to an approved secure location/);
 });
 
 test("Supabase environment contract separates client-safe and server-only values", () => {

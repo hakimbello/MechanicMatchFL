@@ -1,5 +1,6 @@
 -- M11: mobile radius coverage and optional provider-reported profile details.
--- Apply only through an authorized Supabase migration workflow after review.
+-- Apply only through the authorized Supabase migration runner after review.
+-- The runner wraps this file atomically; do not embed BEGIN or COMMIT here.
 
 alter table public.provider_records
   add column if not exists years_experience smallint,
@@ -20,6 +21,21 @@ alter table public.provider_records
     (service_base_zip is null and service_radius_miles is null)
     or (service_base_zip is not null and service_radius_miles is not null)
   ) not valid;
+
+-- NOT VALID enforces the pair for new writes without rejecting legacy rows.
+-- Validate immediately when legacy rows are already clean; otherwise follow
+-- docs/m11-migration-runbook.md after an authorized data review.
+do $$
+begin
+  if not exists (
+    select 1
+    from public.provider_records
+    where (service_base_zip is null) <> (service_radius_miles is null)
+  ) then
+    alter table public.provider_records
+      validate constraint provider_records_mobile_radius_pair;
+  end if;
+end $$;
 
 -- Preserve county-only legacy rows while allowing new explicit ZIP or radius coverage.
 alter table public.provider_records
@@ -44,9 +60,10 @@ alter table public.provider_records
     )
   );
 
-drop view if exists public.active_public_providers;
-
-create view public.active_public_providers as
+-- Existing columns retain their names, order, and types. The two M11 columns
+-- are appended, so CREATE OR REPLACE preserves the view object, grants,
+-- ownership, options, comments, rules, and dependent objects.
+create or replace view public.active_public_providers as
 select
   id,
   business_name as name,
@@ -80,9 +97,6 @@ select
   spoken_languages
 from public.provider_records
 where status = 'active';
-
-revoke all on table public.active_public_providers from anon, authenticated;
-grant select on table public.active_public_providers to anon, authenticated;
 
 comment on column public.provider_records.years_experience is
   'Optional provider-reported years of experience. Public only after the provider is active.';
