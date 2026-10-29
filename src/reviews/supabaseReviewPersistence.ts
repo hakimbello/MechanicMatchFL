@@ -72,20 +72,22 @@ export class SupabaseReviewPersistence implements ReviewPersistence {
   }
 
   async listPublicReviews(providerId: string): Promise<PublicReview[]> {
-    const { data, error } = await this.publicClient
-      .from("approved_public_reviews")
-      .select("id,provider_id,rating,review_text,reviewer_name,email_verified,published_at")
-      .eq("provider_id", providerId)
-      .order("published_at", { ascending: false });
-    if (error || !data) throw new ReviewPersistenceError();
-    return data.map((row) => ({
+    const [reviewResult, responseResult] = await Promise.all([
+      this.publicClient.from("approved_public_reviews").select("id,provider_id,rating,review_text,reviewer_name,email_verified,published_at").eq("provider_id", providerId).order("published_at", { ascending: false }),
+      this.publicClient.from("approved_public_provider_responses").select("review_id,response_text,published_at").eq("provider_id", providerId)
+    ]);
+    if (reviewResult.error || !reviewResult.data || responseResult.error || !responseResult.data) throw new ReviewPersistenceError();
+    const responses = new Map(responseResult.data.map((row) => [String(row.review_id), row]));
+    return reviewResult.data.map((row) => ({
       id: String(row.id),
       providerId: String(row.provider_id),
       rating: Number(row.rating),
       reviewText: String(row.review_text),
       reviewerName: String(row.reviewer_name),
       emailVerified: true,
-      publishedAt: String(row.published_at)
+      publishedAt: String(row.published_at),
+      providerResponse: responses.get(String(row.id)) ? String(responses.get(String(row.id))!.response_text) : undefined,
+      responsePublishedAt: responses.get(String(row.id)) ? String(responses.get(String(row.id))!.published_at) : undefined
     }));
   }
 

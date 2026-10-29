@@ -32,6 +32,9 @@ body {
 }
 
 .site-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
   width: 100%;
   max-width: 1120px;
   margin: 0 auto;
@@ -726,6 +729,15 @@ textarea {
 
 .public-review p {
   margin: 0;
+}
+
+.provider-response {
+  display: grid;
+  gap: 6px;
+  margin-top: 4px;
+  border-left: 3px solid var(--accent);
+  background: #f5f9ff;
+  padding: 10px 12px;
 }
 
 .rating-fieldset {

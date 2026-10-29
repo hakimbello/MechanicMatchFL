@@ -39,6 +39,8 @@ export interface PublicReview {
   reviewerName: string;
   emailVerified: true;
   publishedAt: string;
+  providerResponse?: string;
+  responsePublishedAt?: string;
 }
 
 export interface PublicReviewAggregate {

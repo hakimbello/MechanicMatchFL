@@ -27,6 +27,19 @@ export default function PrivacyPage() {
       </section>
 
       <section className="profile-card">
+        <h2>Provider claims, disputes, and safety reports</h2>
+        <p>
+          Provider ownership evidence, review disputes, appeals, reporter contact details, and safety investigation notes are
+          private operational records. They are available only to authorized workflows and are not included in public provider
+          or review data.
+        </p>
+        <p>
+          Safety reports do not create public accusations or automatic penalties. Administrators review evidence and record
+          suspension, reinstatement, and appeal decisions separately.
+        </p>
+      </section>
+
+      <section className="profile-card">
         <h2>Customer Searches</h2>
         <p>
           Drivers can enter vehicle year, make, model, repair or service category, and ZIP code to find

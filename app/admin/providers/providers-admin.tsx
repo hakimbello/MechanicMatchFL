@@ -70,6 +70,9 @@ export function AdminProvidersReview({
         <Link className="secondary-action" href="/admin/reviews">
           Moderate Customer Reviews
         </Link>
+        <Link className="secondary-action" href="/admin/trust">
+          Trust and Safety Operations
+        </Link>
       </section>
 
       <section className="admin-layout">

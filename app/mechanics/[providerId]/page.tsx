@@ -190,6 +190,12 @@ export default async function MechanicProfilePage({ params, searchParams }: Mech
                   </header>
                   <p>{review.reviewText}</p>
                   <p className="review-verification-label">Email ownership verified. Service not independently verified.</p>
+                  {review.providerResponse ? (
+                    <div className="provider-response">
+                      <strong>Provider response</strong>
+                      <p>{review.providerResponse}</p>
+                    </div>
+                  ) : null}
                 </article>
               ))}
             </div>
@@ -200,6 +206,15 @@ export default async function MechanicProfilePage({ params, searchParams }: Mech
           <h2 id="write-review-title">Write a review</h2>
           <p className="muted-text">Reviews require email ownership verification and administrator approval before publication.</p>
           <ReviewSubmissionForm providerId={provider.id} />
+        </section>
+
+        <section className="profile-card" aria-labelledby="provider-tools-title">
+          <h2 id="provider-tools-title">Provider and safety tools</h2>
+          <p className="muted-text">Provider ownership claims require administrator approval. Safety reports are confidential.</p>
+          <div className="admin-actions">
+            <Link className="secondary-action admin-action-button" href={`/provider/account?providerId=${encodeURIComponent(provider.id)}`}>Claim This Provider</Link>
+            <Link className="secondary-action admin-action-button" href={`/safety/report?providerId=${encodeURIComponent(provider.id)}`}>Report a Safety Incident</Link>
+          </div>
         </section>
       </main>
     </>

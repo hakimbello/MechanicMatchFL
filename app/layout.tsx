@@ -15,6 +15,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         {children}
         <footer className="site-footer">
           <Link href="/privacy">Privacy</Link>
+          <Link href="/provider/login">Provider Account</Link>
+          <Link href="/safety/report">Safety Report</Link>
         </footer>
         <SiteAnalytics />
       </body>
