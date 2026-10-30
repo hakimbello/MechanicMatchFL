@@ -67,6 +67,10 @@ body {
   margin-left: auto;
 }
 
+.site-nav-spacer {
+  flex: 1;
+}
+
 .site-nav-links a,
 .language-switcher a {
   display: inline-flex;

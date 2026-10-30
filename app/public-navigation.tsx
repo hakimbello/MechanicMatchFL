@@ -9,9 +9,10 @@ import { getPublicMessages } from "../src/i18n/messages.ts";
 export function PublicNavigation() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  if (!isLocalizedPublicPath(pathname) || pathname.endsWith("/reviews/verify")) return null;
+  if (!isLocalizedPublicPath(pathname)) return null;
 
   const locale = localeFromPathname(pathname);
+  const isVerificationPage = pathname === "/reviews/verify" || pathname === "/es/reviews/verify";
   const messages = getPublicMessages(locale).navigation;
   const englishHref = buildLocaleSwitchHref(pathname, "en", searchParams);
   const spanishHref = buildLocaleSwitchHref(pathname, "es", searchParams);
@@ -20,10 +21,12 @@ export function PublicNavigation() {
     <header className="site-header">
       <nav className="site-navigation" aria-label={locale === "es" ? "Navegación principal" : "Main navigation"}>
         <Link className="site-brand" href={localizePublicPath("/", locale)}>MechanicMatchFL</Link>
-        <div className="site-nav-links">
-          <Link href={localizePublicPath("/", locale)}>{messages.home}</Link>
-          <Link href={localizePublicPath("/list-your-business", locale)}>{messages.listBusiness}</Link>
-        </div>
+        {!isVerificationPage ? (
+          <div className="site-nav-links">
+            <Link href={localizePublicPath("/", locale)}>{messages.home}</Link>
+            <Link href={localizePublicPath("/list-your-business", locale)}>{messages.listBusiness}</Link>
+          </div>
+        ) : <span className="site-nav-spacer" aria-hidden="true" />}
         <div className="language-switcher" aria-label={messages.languageLabel} role="group">
           <Link aria-current={locale === "en" ? "page" : undefined} href={englishHref} hrefLang="en-US" lang="en">{messages.english}</Link>
           <Link aria-current={locale === "es" ? "page" : undefined} href={spanishHref} hrefLang="es-US" lang="es">{messages.spanish}</Link>

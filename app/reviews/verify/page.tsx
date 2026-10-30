@@ -3,10 +3,11 @@ import Link from "next/link";
 
 import { VerificationTokenForm } from "./verification-token-form";
 import { getPublicMessages } from "../../../src/i18n/messages.ts";
-import { localizePublicPath, type PublicLocale } from "../../../src/i18n/locale.ts";
+import { localeAlternates, localizePublicPath, type PublicLocale } from "../../../src/i18n/locale.ts";
 
 export const metadata: Metadata = {
   title: "Verify review email",
+  alternates: localeAlternates("/reviews/verify"),
   robots: { index: false, follow: false },
   referrer: "no-referrer"
 };

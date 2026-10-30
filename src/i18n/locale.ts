@@ -43,6 +43,8 @@ export function buildLocaleSwitchHref(
   query: URLSearchParams | ReadonlyURLSearchParamsLike = new URLSearchParams()
 ): string {
   const path = localizePublicPath(pathname, targetLocale);
+  if (stripLocalePrefix(pathname) === "/reviews/verify") return path;
+
   const safe = new URLSearchParams();
 
   for (const [key, value] of query.entries()) {

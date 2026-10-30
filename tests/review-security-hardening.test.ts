@@ -221,7 +221,7 @@ test("verification tokens stay out of request URLs, referrers, and server-render
   assert.doesNotMatch(page, /token\?: string/);
   assert.match(clientForm, /window\.location\.hash/);
   assert.match(clientForm, /window\.history\.replaceState/);
-  assert.match(analytics, /pathname === "\/reviews\/verify"/);
+  assert.match(analytics, /stripLocalePrefix\(pathname\) === "\/reviews\/verify"/);
   assert.match(analytics, /return null/);
 });
 

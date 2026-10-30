@@ -23,8 +23,21 @@ test("English is the default locale and Spanish uses the /es prefix", () => {
 test("locale switcher preserves only validated public search context", () => {
   const query = new URLSearchParams({ service: "ac", make: "Honda", zip: "33161", token: "secret", status: "verified", callback: "https://evil.test" });
   assert.equal(buildLocaleSwitchHref("/mechanics/provider-1", "es", query), "/es/mechanics/provider-1?service=ac&make=Honda&zip=33161");
-  assert.equal(buildLocaleSwitchHref("/reviews/verify", "es", query), "/es/reviews/verify?service=ac&make=Honda&zip=33161");
+  assert.equal(buildLocaleSwitchHref("/reviews/verify", "es", query), "/es/reviews/verify");
   assert.equal(buildLocaleSwitchHref("/", "es", new URLSearchParams({ zip: "bad", service: "invented" })), "/es");
+});
+
+test("verification locale switches never copy tokens, status, or arbitrary query data", () => {
+  const sensitive = new URLSearchParams({
+    token: "verification-token",
+    status: "verified",
+    service: "ac",
+    make: "Honda",
+    zip: "33161",
+    next: "https://example.test"
+  });
+  assert.equal(buildLocaleSwitchHref("/reviews/verify", "es", sensitive), "/es/reviews/verify");
+  assert.equal(buildLocaleSwitchHref("/es/reviews/verify", "en", sensitive), "/reviews/verify");
 });
 
 test("providerId is preserved only for the confidential safety route", () => {
@@ -104,5 +117,19 @@ test("Spanish routes reuse the same search, review, photo, and persistence bound
   assert.match(sharedProfile, /getPublicReviewPersistenceForRuntime/);
   assert.match(sharedProfile, /getPhotoPersistenceForRuntime/);
   assert.match(navigation, /aria-current/);
-  assert.match(navigation, /reviews\/verify/);
+  assert.match(navigation, /isVerificationPage/);
+  assert.doesNotMatch(navigation, /pathname\.endsWith\("\/reviews\/verify"\)\) return null/);
+});
+
+test("verification pages remain noindex, no-referrer, and expose reciprocal locale metadata", () => {
+  const english = readFileSync("app/reviews/verify/page.tsx", "utf8");
+  const spanish = readFileSync("app/es/reviews/verify/page.tsx", "utf8");
+  const analytics = readFileSync("app/site-analytics.tsx", "utf8");
+  for (const source of [english, spanish]) {
+    assert.match(source, /index: false/);
+    assert.match(source, /follow: false/);
+    assert.match(source, /referrer: "no-referrer"/);
+    assert.match(source, /localeAlternates\("\/reviews\/verify"\)/);
+  }
+  assert.match(analytics, /stripLocalePrefix\(pathname\) === "\/reviews\/verify"/);
 });
