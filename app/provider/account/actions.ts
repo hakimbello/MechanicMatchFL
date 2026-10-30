@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getProviderAuthentication, signOutProviderSession } from "../../../src/providers/providerAuth.ts";
+import { getPhotoPersistenceForRuntime } from "../../../src/photos/runtimePhotoPersistence.ts";
+import { submitProviderPhoto } from "../../../src/photos/photoService.ts";
 import { createSupabaseServerAuthClient } from "../../../src/supabase/serverClient.ts";
 import { getTrustPersistenceForRuntime } from "../../../src/trust/runtimeTrustPersistence.ts";
 import { submitProviderAppeal, submitProviderClaim, submitProviderResponse, submitReviewDispute } from "../../../src/trust/trustService.ts";
@@ -12,7 +14,11 @@ async function context() {
   const authentication = await getProviderAuthentication();
   if (!authentication.ok) redirect("/provider/login");
   const client = await createSupabaseServerAuthClient();
-  return { persistence: getTrustPersistenceForRuntime(client) };
+  return {
+    userId: authentication.user.userId,
+    persistence: getTrustPersistenceForRuntime(client),
+    photoPersistence: getPhotoPersistenceForRuntime(client)
+  };
 }
 
 export async function submitClaimAction(formData: FormData) {
@@ -37,6 +43,23 @@ export async function submitAppealAction(formData: FormData) {
   const { persistence } = await context();
   await submitProviderAppeal(String(formData.get("providerId") ?? ""), String(formData.get("reason") ?? ""), persistence);
   revalidatePath("/provider/account");
+}
+
+export async function submitPhotoAction(formData: FormData) {
+  const { userId, photoPersistence } = await context();
+  const file = formData.get("photo");
+  if (!(file instanceof File)) redirect("/provider/account?photo=invalid");
+  const result = await submitProviderPhoto(
+    {
+      userId,
+      providerId: String(formData.get("providerId") ?? ""),
+      file,
+      consentAttested: formData.get("consentAttested") === "yes"
+    },
+    photoPersistence
+  );
+  revalidatePath("/provider/account");
+  redirect(`/provider/account?photo=${result.ok ? "submitted" : "invalid"}`);
 }
 
 export async function providerSignOutAction() {

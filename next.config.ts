@@ -4,6 +4,11 @@ import { SECURITY_HEADERS } from "./src/security/headers.ts";
 
 const nextConfig: NextConfig = {
   agentRules: false,
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "5mb"
+    }
+  },
   async headers() {
     return [
       {

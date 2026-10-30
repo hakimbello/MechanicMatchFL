@@ -11,6 +11,8 @@ import {
 import {
   getRuntimePublicProviderById
 } from "../../../src/providers/runtimeProviderPersistence.ts";
+import { getPhotoPersistenceForRuntime } from "../../../src/photos/runtimePhotoPersistence.ts";
+import type { PublicProviderPhoto } from "../../../src/photos/photoTypes.ts";
 import {
   buildMechanicProfileMetadata,
   buildMechanicProfileNotFoundMetadata
@@ -58,6 +60,7 @@ export default async function MechanicProfilePage({ params, searchParams }: Mech
   const structuredData = buildProviderStructuredData(provider);
   let reviews: PublicReview[] = [];
   let reviewAggregate: PublicReviewAggregate | null = null;
+  let publicPhoto: PublicProviderPhoto | null = null;
   let reviewsAvailable = true;
   try {
     const reviewPersistence = getPublicReviewPersistenceForRuntime();
@@ -67,6 +70,11 @@ export default async function MechanicProfilePage({ params, searchParams }: Mech
     ]);
   } catch {
     reviewsAvailable = false;
+  }
+  try {
+    publicPhoto = await getPhotoPersistenceForRuntime().getPublicPhoto(provider.id);
+  } catch {
+    publicPhoto = null;
   }
 
   return (
@@ -86,14 +94,17 @@ export default async function MechanicProfilePage({ params, searchParams }: Mech
         </Link>
 
         <section className="profile-hero" aria-labelledby="profile-title">
-          <div>
-            <p className="eyebrow">{profile.providerType}</p>
-            <h1 id="profile-title">{profile.name}</h1>
-            <p className="intro">{profile.description}</p>
-            <div className="profile-badges" aria-label="Provider trust and location details">
-              <span>{profile.locationKind}</span>
-              {profile.verified ? <span>Verified profile</span> : null}
-              {profile.claimedProfile ? <span>Claimed profile</span> : null}
+          <div className="profile-identity">
+            {publicPhoto ? <img className="provider-profile-photo" src={`/provider-photos/${encodeURIComponent(provider.id)}`} width={publicPhoto.width} height={publicPhoto.height} alt={`${profile.name} provider photo`} /> : null}
+            <div>
+              <p className="eyebrow">{profile.providerType}</p>
+              <h1 id="profile-title">{profile.name}</h1>
+              <p className="intro">{profile.description}</p>
+              <div className="profile-badges" aria-label="Provider trust and location details">
+                <span>{profile.locationKind}</span>
+                {profile.verified ? <span>Verified profile</span> : null}
+                {profile.claimedProfile ? <span>Claimed profile</span> : null}
+              </div>
             </div>
           </div>
 
