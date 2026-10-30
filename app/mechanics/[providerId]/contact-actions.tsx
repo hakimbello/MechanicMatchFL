@@ -5,25 +5,29 @@ import {
   type MechanicContactEventInput
 } from "../../../src/analytics/contactEvents.ts";
 import type { ContactAction } from "../../../src/profiles/contact.ts";
+import { getPublicMessages } from "../../../src/i18n/messages.ts";
+import type { PublicLocale } from "../../../src/i18n/locale.ts";
 
 interface ContactActionsProps {
   actions: ContactAction[];
   eventContext: Omit<MechanicContactEventInput, "contactMethod">;
+  locale?: PublicLocale;
 }
 
-export function ContactActions({ actions, eventContext }: ContactActionsProps) {
+export function ContactActions({ actions, eventContext, locale = "en" }: ContactActionsProps) {
+  const messages = getPublicMessages(locale).profile;
   if (actions.length === 0) {
     return (
       <div className="contact-panel">
-        <h2>Contact</h2>
-        <p className="muted-text">Contact information is not available for this provider yet.</p>
+        <h2>{messages.contact}</h2>
+        <p className="muted-text">{messages.contactUnavailable}</p>
       </div>
     );
   }
 
   return (
     <div className="contact-panel">
-      <h2>Contact mechanic</h2>
+      <h2>{messages.contact}</h2>
       <div className="contact-actions">
         {actions.map((action) => (
           <a

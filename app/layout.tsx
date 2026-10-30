@@ -1,22 +1,29 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { headers } from "next/headers";
 import type { ReactNode } from "react";
 import "./globals.css";
 
 import { buildRootMetadata } from "../src/seo/metadata.ts";
 import { SiteAnalytics } from "./site-analytics";
+import { normalizePublicLocale, localizePublicPath } from "../src/i18n/locale.ts";
+import { getPublicMessages } from "../src/i18n/messages.ts";
+import { PublicNavigation } from "./public-navigation";
 
 export const metadata: Metadata = buildRootMetadata();
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const locale = normalizePublicLocale((await headers()).get("x-mechanicmatch-locale"));
+  const messages = getPublicMessages(locale).navigation;
   return (
-    <html lang="en">
+    <html lang={locale === "es" ? "es-US" : "en-US"}>
       <body>
+        <PublicNavigation />
         {children}
         <footer className="site-footer">
-          <Link href="/privacy">Privacy</Link>
-          <Link href="/provider/login">Provider Account</Link>
-          <Link href="/safety/report">Safety Report</Link>
+          {locale === "es" ? <Link href="/es/privacy">{messages.privacy}</Link> : <Link href="/privacy">{messages.privacy}</Link>}
+          <Link href="/provider/login">{messages.providerAccount}</Link>
+          <Link href={localizePublicPath("/safety/report", locale)}>{messages.safetyReport}</Link>
         </footer>
         <SiteAnalytics />
       </body>

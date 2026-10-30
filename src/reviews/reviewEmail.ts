@@ -1,4 +1,5 @@
 import "server-only";
+import type { PublicLocale } from "../i18n/locale.ts";
 
 export const REVIEW_EMAIL_ENV_VARS = ["RESEND_API_KEY", "REVIEW_EMAIL_FROM", "NEXT_PUBLIC_SITE_URL"] as const;
 export const REVIEW_ABUSE_ENV_VAR = "REVIEW_ABUSE_HASH_KEY" as const;
@@ -10,6 +11,7 @@ export interface ReviewVerificationEmail {
   providerName: string;
   verificationUrl: string;
   idempotencyKey: string;
+  locale?: PublicLocale;
 }
 
 export interface ReviewEmailSender {
@@ -71,7 +73,7 @@ export function createResendReviewEmailSender(config = getReviewDeliveryConfig()
         body: JSON.stringify({
           from: config.from,
           to: [message.recipient],
-          subject: "Verify your MechanicMatchFL review",
+          subject: message.locale === "es" ? "Verifica tu reseña de MechanicMatchFL" : "Verify your MechanicMatchFL review",
           html: buildVerificationEmailHtml(message)
         }),
         cache: "no-store"
@@ -88,6 +90,9 @@ export function createResendReviewEmailSender(config = getReviewDeliveryConfig()
 function buildVerificationEmailHtml(message: ReviewVerificationEmail): string {
   const providerName = escapeHtml(message.providerName);
   const verificationUrl = escapeHtml(message.verificationUrl);
+  if (message.locale === "es") {
+    return `<p>Confirma tu correo para enviar tu reseña de ${providerName} a moderación.</p><p><a href="${verificationUrl}">Verificar correo</a></p><p>Este enlace vence en 30 minutos y solo puede usarse una vez. La verificación confirma únicamente la propiedad del correo; no verifica una compra, reparación o relación de servicio.</p>`;
+  }
   return `<p>Confirm your email address to submit your review of ${providerName} for moderation.</p><p><a href="${verificationUrl}">Verify email</a></p><p>This link expires in 30 minutes and can be used once. Email verification confirms email ownership only; it does not verify a purchase, repair, or service relationship.</p>`;
 }
 

@@ -210,13 +210,13 @@ test("event names are stable and typed", () => {
 });
 
 test("privacy page exists", () => {
-  const page = readFileSync("app/privacy/page.tsx", "utf8");
+  const page = readFileSync("src/i18n/privacy.ts", "utf8");
 
-  assert.match(page, /Privacy at MechanicMatchFL/);
+  assert.match(page, /How MechanicMatchFL handles information/);
 });
 
 test("privacy page does not claim unsupported compliance", () => {
-  const page = readFileSync("app/privacy/page.tsx", "utf8").toLowerCase();
+  const page = readFileSync("src/i18n/privacy.ts", "utf8").toLowerCase();
 
   assert.equal(page.includes("gdpr compliant"), false);
   assert.equal(page.includes("ccpa compliant"), false);
@@ -226,10 +226,10 @@ test("privacy page does not claim unsupported compliance", () => {
 });
 
 test("privacy page accurately identifies analytics", () => {
-  const page = readFileSync("app/privacy/page.tsx", "utf8");
+  const page = readFileSync("src/i18n/privacy.ts", "utf8");
 
   assert.match(page, /Vercel Web Analytics/);
-  assert.match(page, /raw customer ZIP codes/);
+  assert.match(page, /raw ZIP codes/);
 });
 
 test("privacy page is discoverably linked", () => {

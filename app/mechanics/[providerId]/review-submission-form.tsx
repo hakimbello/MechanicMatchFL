@@ -4,10 +4,13 @@ import { useState, type FormEvent } from "react";
 
 import type { ReviewSubmissionFieldErrors, ReviewSubmissionInput } from "../../../src/reviews/reviewTypes.ts";
 import { submitCustomerReviewAction } from "./review-actions";
+import { getPublicMessages } from "../../../src/i18n/messages.ts";
+import type { PublicLocale } from "../../../src/i18n/locale.ts";
 
 const EMPTY_REVIEW = { rating: 0, reviewText: "", reviewerEmail: "", displayName: "", website: "" };
 
-export function ReviewSubmissionForm({ providerId }: { providerId: string }) {
+export function ReviewSubmissionForm({ providerId, locale = "en" }: { providerId: string; locale?: PublicLocale }) {
+  const messages = getPublicMessages(locale).reviewForm;
   const [form, setForm] = useState(EMPTY_REVIEW);
   const [errors, setErrors] = useState<ReviewSubmissionFieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -23,7 +26,7 @@ export function ReviewSubmissionForm({ providerId }: { providerId: string }) {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsSubmitting(true);
-    const result = await submitCustomerReviewAction({ providerId, ...form } as ReviewSubmissionInput);
+    const result = await submitCustomerReviewAction({ providerId, ...form } as ReviewSubmissionInput, locale);
     setIsSubmitting(false);
     if (!result.ok) {
       setErrors(result.errors ?? {});
@@ -39,8 +42,8 @@ export function ReviewSubmissionForm({ providerId }: { providerId: string }) {
   if (submitted) {
     return (
       <div className="confirmation-panel" role="status">
-        <h3>Check your email</h3>
-        <p>Your review is not public. Use the single-use link within 30 minutes to verify email ownership, then it will await administrator moderation.</p>
+        <h3>{messages.checkEmail}</h3>
+        <p>{messages.submitted}</p>
       </div>
     );
   }
@@ -48,12 +51,12 @@ export function ReviewSubmissionForm({ providerId }: { providerId: string }) {
   return (
     <form className="review-form" onSubmit={handleSubmit} noValidate>
       <fieldset className="rating-fieldset">
-        <legend>Rating</legend>
+        <legend>{messages.rating}</legend>
         <div className="rating-options">
           {[1, 2, 3, 4, 5].map((rating) => (
             <label key={rating}>
               <input checked={form.rating === rating} name="rating" onChange={() => update("rating", rating)} type="radio" />
-              <span>{rating} {rating === 1 ? "star" : "stars"}</span>
+              <span>{rating} {rating === 1 ? messages.star : messages.stars}</span>
             </label>
           ))}
         </div>
@@ -61,22 +64,22 @@ export function ReviewSubmissionForm({ providerId }: { providerId: string }) {
       </fieldset>
 
       <div className="field-group">
-        <label htmlFor="review-text">Written review</label>
-        <textarea id="review-text" maxLength={2000} minLength={20} onChange={(event) => update("reviewText", event.target.value)} rows={5} value={form.reviewText} />
-        <p className="field-help">Describe your experience honestly. Negative reviews are allowed and assessed under the same moderation rules.</p>
+        <label htmlFor="review-text">{messages.written}</label>
+        <textarea aria-describedby={errors.reviewText ? "review-text-error" : "review-text-help"} aria-invalid={Boolean(errors.reviewText)} id="review-text" maxLength={2000} minLength={20} onChange={(event) => update("reviewText", event.target.value)} rows={5} value={form.reviewText} />
+        <p className="field-help" id="review-text-help">{messages.honestHelp}</p>
         <FieldError id="review-text-error" message={errors.reviewText} />
       </div>
 
       <div className="form-grid">
         <div className="field-group">
-          <label htmlFor="review-email">Email</label>
-          <input id="review-email" inputMode="email" onChange={(event) => update("reviewerEmail", event.target.value)} value={form.reviewerEmail} />
-          <p className="field-help">Private. Used only to verify email ownership and prevent abuse.</p>
+          <label htmlFor="review-email">{messages.email}</label>
+          <input aria-describedby={errors.reviewerEmail ? "review-email-error" : "review-email-help"} aria-invalid={Boolean(errors.reviewerEmail)} id="review-email" inputMode="email" onChange={(event) => update("reviewerEmail", event.target.value)} value={form.reviewerEmail} />
+          <p className="field-help" id="review-email-help">{messages.emailHelp}</p>
           <FieldError id="review-email-error" message={errors.reviewerEmail} />
         </div>
         <div className="field-group">
-          <label htmlFor="review-name">Public display name</label>
-          <input id="review-name" maxLength={80} onChange={(event) => update("displayName", event.target.value)} placeholder="Optional; otherwise Anonymous" value={form.displayName} />
+          <label htmlFor="review-name">{messages.displayName}</label>
+          <input aria-describedby={errors.displayName ? "review-name-error" : undefined} aria-invalid={Boolean(errors.displayName)} id="review-name" maxLength={80} onChange={(event) => update("displayName", event.target.value)} placeholder={messages.displayNamePlaceholder} value={form.displayName} />
           <FieldError id="review-name-error" message={errors.displayName} />
         </div>
       </div>
@@ -86,9 +89,9 @@ export function ReviewSubmissionForm({ providerId }: { providerId: string }) {
         <input autoComplete="off" id="review-website" onChange={(event) => update("website", event.target.value)} tabIndex={-1} value={form.website} />
       </div>
 
-      <p className="field-help">Email verified means the reviewer controlled the email address. It does not verify a purchase, completed repair, or service relationship.</p>
+      <p className="field-help" data-policy="Email verification does not verify a purchase, completed repair, or service relationship">{messages.verificationHelp}</p>
       {formError ? <p className="field-error" role="alert">{formError}</p> : null}
-      <button className="primary-action" disabled={isSubmitting} type="submit">{isSubmitting ? "Submitting..." : "Submit review"}</button>
+      <button className="primary-action" disabled={isSubmitting} type="submit">{isSubmitting ? messages.submitting : messages.submit}</button>
     </form>
   );
 }

@@ -1,17 +1,19 @@
 import type { Provider } from "../domain/providers.ts";
 import { formatSpecialty } from "../presentation/providerText.ts";
 import { buildAbsoluteUrl } from "./site.ts";
+import { localizePublicPath, type PublicLocale } from "../i18n/locale.ts";
 
 type JsonLdValue = string | number | boolean | null | JsonLdObject | JsonLdValue[];
 type JsonLdObject = { [key: string]: JsonLdValue | undefined };
 
-export function buildProviderStructuredData(provider: Provider): JsonLdObject {
-  const profileUrl = buildAbsoluteUrl(`/mechanics/${encodeURIComponent(provider.id)}`);
+export function buildProviderStructuredData(provider: Provider, locale: PublicLocale = "en"): JsonLdObject {
+  const profileUrl = buildAbsoluteUrl(localizePublicPath(`/mechanics/${encodeURIComponent(provider.id)}`, locale));
   const data: JsonLdObject = {
     "@context": "https://schema.org",
     "@type": "AutoRepair",
     "@id": `${profileUrl}#business`,
     name: provider.name,
+    inLanguage: locale === "es" ? "es-US" : "en-US",
     description: provider.description,
     url: profileUrl,
     telephone: provider.contact?.phone,
@@ -19,7 +21,7 @@ export function buildProviderStructuredData(provider: Provider): JsonLdObject {
       "@type": "Offer",
       itemOffered: {
         "@type": "Service",
-        name: formatSpecialty(service)
+        name: formatSpecialty(service, locale)
       }
     }))
   };

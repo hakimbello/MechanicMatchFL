@@ -7,5 +7,5 @@ export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const providers = await listRuntimePublicProviders();
-  return <MechanicSearchExperience providers={providers} />;
+  return <MechanicSearchExperience providers={providers} locale="en" />;
 }

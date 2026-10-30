@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import type { Provider } from "../domain/providers.ts";
 import { formatProviderType, formatSpecialty } from "../presentation/providerText.ts";
 import { buildAbsoluteUrl, buildCanonicalPath, getSiteUrl, SITE_DESCRIPTION, SITE_NAME } from "./site.ts";
+import { localeAlternates, localizePublicPath, type PublicLocale } from "../i18n/locale.ts";
+import { getPublicMessages } from "../i18n/messages.ts";
 
 export const HOME_TITLE = "Find the right mechanic for your car";
 export const HOME_DESCRIPTION =
@@ -36,39 +38,38 @@ export function buildRootMetadata(): Metadata {
   };
 }
 
-export const homeMetadata: Metadata = {
-  title: HOME_TITLE,
-  description: HOME_DESCRIPTION,
-  alternates: {
-    canonical: buildCanonicalPath("/")
-  },
-  openGraph: {
-    title: `${HOME_TITLE} | ${SITE_NAME}`,
-    description: HOME_DESCRIPTION,
-    url: buildAbsoluteUrl("/")
-  },
-  twitter: {
-    title: `${HOME_TITLE} | ${SITE_NAME}`,
-    description: HOME_DESCRIPTION
-  }
-};
+export function buildHomeMetadata(locale: PublicLocale = "en"): Metadata {
+  const messages = getPublicMessages(locale).metadata;
+  const path = localizePublicPath("/", locale);
+  return {
+    title: messages.homeTitle,
+    description: messages.homeDescription,
+    alternates: { ...localeAlternates("/"), canonical: path },
+    openGraph: {
+      title: `${messages.homeTitle} | ${SITE_NAME}`,
+      description: messages.homeDescription,
+      locale: locale === "es" ? "es_US" : "en_US",
+      url: buildAbsoluteUrl(path)
+    },
+    twitter: { title: `${messages.homeTitle} | ${SITE_NAME}`, description: messages.homeDescription }
+  };
+}
 
-export const listBusinessMetadata: Metadata = {
-  title: LIST_BUSINESS_TITLE,
-  description: LIST_BUSINESS_DESCRIPTION,
-  alternates: {
-    canonical: buildCanonicalPath("/list-your-business")
-  },
-  openGraph: {
-    title: `${LIST_BUSINESS_TITLE} | ${SITE_NAME}`,
-    description: LIST_BUSINESS_DESCRIPTION,
-    url: buildAbsoluteUrl("/list-your-business")
-  },
-  twitter: {
-    title: `${LIST_BUSINESS_TITLE} | ${SITE_NAME}`,
-    description: LIST_BUSINESS_DESCRIPTION
-  }
-};
+export const homeMetadata: Metadata = buildHomeMetadata("en");
+
+export function buildListBusinessMetadata(locale: PublicLocale = "en"): Metadata {
+  const messages = getPublicMessages(locale).metadata;
+  const path = localizePublicPath("/list-your-business", locale);
+  return {
+    title: messages.listingTitle,
+    description: messages.listingDescription,
+    alternates: { ...localeAlternates("/list-your-business"), canonical: path },
+    openGraph: { title: `${messages.listingTitle} | ${SITE_NAME}`, description: messages.listingDescription, locale: locale === "es" ? "es_US" : "en_US", url: buildAbsoluteUrl(path) },
+    twitter: { title: `${messages.listingTitle} | ${SITE_NAME}`, description: messages.listingDescription }
+  };
+}
+
+export const listBusinessMetadata: Metadata = buildListBusinessMetadata("en");
 
 export const adminProvidersMetadata: Metadata = {
   title: "Development provider review",
@@ -82,20 +83,23 @@ export const adminProvidersMetadata: Metadata = {
   }
 };
 
-export function buildMechanicProfileMetadata(provider: Provider): Metadata {
-  const canonicalPath = getMechanicProfileCanonicalPath(provider.id);
-  const description = buildMechanicProfileDescription(provider);
+export function buildMechanicProfileMetadata(provider: Provider, locale: PublicLocale = "en"): Metadata {
+  const canonicalPath = getMechanicProfileCanonicalPath(provider.id, locale);
+  const description = buildMechanicProfileDescription(provider, locale);
+  const basePath = `/mechanics/${encodeURIComponent(provider.id)}`;
 
   return {
     title: provider.name,
     description,
     alternates: {
+      ...localeAlternates(basePath),
       canonical: canonicalPath
     },
     openGraph: {
       type: "profile",
       title: `${provider.name} | ${SITE_NAME}`,
       description,
+      locale: locale === "es" ? "es_US" : "en_US",
       url: buildAbsoluteUrl(canonicalPath)
     },
     twitter: {
@@ -105,9 +109,9 @@ export function buildMechanicProfileMetadata(provider: Provider): Metadata {
   };
 }
 
-export function buildMechanicProfileNotFoundMetadata(): Metadata {
+export function buildMechanicProfileNotFoundMetadata(locale: PublicLocale = "en"): Metadata {
   return {
-    title: "Mechanic profile not found",
+    title: getPublicMessages(locale).metadata.notFound,
     robots: {
       index: false,
       follow: false
@@ -115,38 +119,39 @@ export function buildMechanicProfileNotFoundMetadata(): Metadata {
   };
 }
 
-export function getMechanicProfileCanonicalPath(providerId: string): string {
-  return buildCanonicalPath(`/mechanics/${encodeURIComponent(providerId)}`);
+export function getMechanicProfileCanonicalPath(providerId: string, locale: PublicLocale = "en"): string {
+  return buildCanonicalPath(localizePublicPath(`/mechanics/${encodeURIComponent(providerId)}`, locale));
 }
 
-export function buildMechanicProfileDescription(provider: Provider): string {
+export function buildMechanicProfileDescription(provider: Provider, locale: PublicLocale = "en"): string {
   if (provider.description) {
     return provider.description;
   }
 
-  const providerType = formatProviderType(provider.type).toLowerCase();
-  const location = getProviderLocationPhrase(provider);
-  const services = provider.services.slice(0, 3).map(formatSpecialty).join(", ");
+  const providerType = formatProviderType(provider.type, locale).toLowerCase();
+  const location = getProviderLocationPhrase(provider, locale);
+  const services = provider.services.slice(0, 3).map((service) => formatSpecialty(service, locale)).join(", ");
 
-  return [provider.name, providerType, location, services ? `Services include ${services}.` : undefined]
+  const serviceText = services ? (locale === "es" ? `Los servicios incluyen ${services}.` : `Services include ${services}.`) : undefined;
+  return [provider.name, providerType, location, serviceText]
     .filter(Boolean)
     .join(" ");
 }
 
-function getProviderLocationPhrase(provider: Provider): string {
+function getProviderLocationPhrase(provider: Provider, locale: PublicLocale): string {
   if (provider.locationKind === "mobile") {
     const zips = provider.mobileServiceArea?.zipCodes;
     const counties = provider.mobileServiceArea?.counties;
 
     if (zips?.length) {
-      return `serving ZIP codes ${zips.join(", ")}.`;
+      return locale === "es" ? `atiende los códigos postales ${zips.join(", ")}.` : `serving ZIP codes ${zips.join(", ")}.`;
     }
 
     if (counties?.length) {
-      return `serving ${counties.join(", ")}.`;
+      return locale === "es" ? `atiende ${counties.join(", ")}.` : `serving ${counties.join(", ")}.`;
     }
 
-    return "serving a defined South Florida mobile service area.";
+    return locale === "es" ? "atiende un área móvil definida del sur de Florida." : "serving a defined South Florida mobile service area.";
   }
 
   return [provider.address?.city, provider.address?.county].filter(Boolean).join(", ");

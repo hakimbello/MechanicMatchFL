@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { VerificationTokenForm } from "./verification-token-form";
+import { getPublicMessages } from "../../../src/i18n/messages.ts";
+import { localizePublicPath, type PublicLocale } from "../../../src/i18n/locale.ts";
 
 export const metadata: Metadata = {
   title: "Verify review email",
@@ -10,19 +12,23 @@ export const metadata: Metadata = {
 };
 
 export default async function VerifyReviewPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
+  return renderVerifyReviewPage(searchParams, "en");
+}
+
+export async function renderVerifyReviewPage(searchParams: Promise<{ status?: string }>, locale: PublicLocale) {
   const { status } = await searchParams;
-  const message = statusMessage(status);
+  const messages = getPublicMessages(locale).verification;
+  const message = statusMessage(status, locale);
   return (
     <main className="page-shell provider-flow">
-      <Link className="back-link" href="/">Back to Search</Link>
+      <Link className="back-link" href={localizePublicPath("/", locale)}>{getPublicMessages(locale).profile.back}</Link>
       <section className="profile-card">
-        <p className="eyebrow">Customer review</p>
-        <h1>Verify your email</h1>
+        <p className="eyebrow">{messages.eyebrow}</p>
+        <h1>{messages.title}</h1>
         {message ? <p className="intro" role="status">{message}</p> : (
           <>
-            <p className="intro">Confirm email ownership to place your unpublished review in the moderation queue.</p>
-            <p className="muted-text">This confirms email ownership only. It does not verify a purchase, completed repair, or service relationship.</p>
-            <VerificationTokenForm />
+            <p className="intro">{messages.intro}</p>
+            <VerificationTokenForm locale={locale} />
           </>
         )}
       </section>
@@ -30,10 +36,11 @@ export default async function VerifyReviewPage({ searchParams }: { searchParams:
   );
 }
 
-function statusMessage(status?: string): string | null {
-  if (status === "verified") return "Email ownership verified. Your review is unpublished and awaiting administrator moderation.";
-  if (status === "expired") return "This verification link has expired. The review was not published.";
-  if (status === "used") return "This single-use verification link has already been used.";
-  if (status === "invalid") return "This verification link is invalid. The review was not published.";
+function statusMessage(status: string | undefined, locale: PublicLocale): string | null {
+  const messages = getPublicMessages(locale).verification;
+  if (status === "verified") return `${messages.verifiedTitle}. ${messages.verifiedBody}`;
+  if (status === "expired") return `${messages.expiredTitle}. ${messages.expiredBody}`;
+  if (status === "used") return `${messages.usedTitle}. ${messages.usedBody}`;
+  if (status === "invalid") return `${messages.invalidTitle}. ${messages.invalidBody}`;
   return null;
 }

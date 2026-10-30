@@ -23,6 +23,8 @@ import {
   type SubmissionFieldErrors
 } from "../../src/submissions/submissionTypes.ts";
 import { submitProviderAction } from "./actions";
+import { formatMessage, getPublicMessages } from "../../src/i18n/messages.ts";
+import { localizePublicPath, type PublicLocale } from "../../src/i18n/locale.ts";
 
 const RELATIONSHIP_LABELS: Record<AuthorizationRelationship, string> = {
   myself: "Myself",
@@ -31,7 +33,8 @@ const RELATIONSHIP_LABELS: Record<AuthorizationRelationship, string> = {
   "i-work-for-this-business": "I work for this business"
 };
 
-export function ProviderSubmissionForm() {
+export function ProviderSubmissionForm({ locale = "en" }: { locale?: PublicLocale }) {
+  const messages = getPublicMessages(locale).listing;
   const [form, setForm] = useState<ProviderSubmissionInput>(EMPTY_PROVIDER_SUBMISSION);
   const [errors, setErrors] = useState<SubmissionFieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -89,7 +92,7 @@ export function ProviderSubmissionForm() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsSubmitting(true);
-    const result = await submitProviderAction(form);
+    const result = await submitProviderAction(form, locale);
     setIsSubmitting(false);
 
     if (!result.ok) {
@@ -112,45 +115,39 @@ export function ProviderSubmissionForm() {
 
   return (
     <main className="page-shell provider-flow">
-      <Link className="back-link" href="/">
-        Back to Search
+      <Link className="back-link" href={localizePublicPath("/", locale)}>
+        {messages.back}
       </Link>
 
       <section className="profile-card">
-        <p className="eyebrow">Provider submission</p>
-        <h1>List your business</h1>
-        <p className="intro">
-          Submit a mechanic or automotive repair listing for review. Listings are not public until
-          an administrator reviews and activates them.
-        </p>
+        <p className="eyebrow">{messages.eyebrow}</p>
+        <h1>{messages.title}</h1>
+        <p className="intro">{messages.intro}</p>
       </section>
 
       {submittedName ? (
         <section className="confirmation-panel" role="status">
-          <h2>Your profile was submitted for review.</h2>
-          <p>
-            {submittedName} is pending review and is not public yet. We do not promise a specific
-            approval time during this development milestone.
-          </p>
-          <Link className="secondary-action standalone-link" href="/">
-            Back to Search
+          <h2>{messages.submittedTitle}</h2>
+          <p>{formatMessage(messages.submittedBody, { name: submittedName })}</p>
+          <Link className="secondary-action standalone-link" href={localizePublicPath("/", locale)}>
+            {messages.back}
           </Link>
         </section>
       ) : null}
 
       {formError ? (
         <section className="confirmation-panel error-panel" role="alert">
-          <h2>Submission could not be saved.</h2>
+          <h2>{messages.errorTitle}</h2>
           <p>{formError}</p>
         </section>
       ) : null}
 
       <form className="submission-form" onSubmit={handleSubmit} noValidate>
         <section className="form-section" aria-labelledby="about-business">
-          <h2 id="about-business">About you and the business</h2>
+          <h2 id="about-business">{messages.about}</h2>
           <TextField
             error={errors.businessName}
-            label="Provider or business name"
+            label={messages.businessName}
             name="businessName"
             onChange={(value) => updateField("businessName", value)}
             value={form.businessName}
@@ -158,7 +155,7 @@ export function ProviderSubmissionForm() {
           <TextField
             error={errors.phone}
             inputMode="tel"
-            label="Phone"
+            label={messages.phone}
             name="phone"
             onChange={(value) => updateField("phone", value)}
             value={form.phone}
@@ -166,25 +163,26 @@ export function ProviderSubmissionForm() {
           <TextField
             error={errors.email}
             inputMode="email"
-            label="Email"
+            label={messages.email}
             name="email"
             onChange={(value) => updateField("email", value)}
             value={form.email}
           />
           <SelectField
             error={errors.providerType}
-            label="Provider type"
+            label={messages.providerType}
             name="providerType"
             onChange={(value) => updateField("providerType", value as ProviderSubmissionInput["providerType"])}
-            options={PROVIDER_TYPES.map((type) => ({ value: type, label: formatProviderType(type) }))}
+            options={PROVIDER_TYPES.map((type) => ({ value: type, label: formatProviderType(type, locale) }))}
+            placeholder={messages.chooseOne}
             value={form.providerType}
           />
         </section>
 
         <section className="form-section" aria-labelledby="work-on">
-          <h2 id="work-on">What do you work on?</h2>
+          <h2 id="work-on">{messages.workOn}</h2>
           <fieldset className="service-options">
-            <legend>Services</legend>
+            <legend>{messages.services}</legend>
             <div className="service-grid">
               {PROVIDER_SPECIALTIES.map((service) => (
                 <label className="service-choice" key={service}>
@@ -193,7 +191,7 @@ export function ProviderSubmissionForm() {
                     onChange={() => toggleService(service)}
                     type="checkbox"
                   />
-                  <span>{formatSpecialty(service)}</span>
+                  <span>{formatSpecialty(service, locale)}</span>
                 </label>
               ))}
             </div>
@@ -201,7 +199,7 @@ export function ProviderSubmissionForm() {
           </fieldset>
 
           <fieldset className="service-options">
-            <legend>Vehicle compatibility</legend>
+            <legend>{messages.compatibility}</legend>
             <label className="service-choice">
               <input
                 checked={form.allMakes}
@@ -209,7 +207,7 @@ export function ProviderSubmissionForm() {
                 onChange={() => updateField("allMakes", true)}
                 type="radio"
               />
-              <span>All makes</span>
+              <span>{messages.allMakes}</span>
             </label>
             <label className="service-choice">
               <input
@@ -218,12 +216,12 @@ export function ProviderSubmissionForm() {
                 onChange={() => updateField("allMakes", false)}
                 type="radio"
               />
-              <span>Selected makes</span>
+              <span>{messages.selectedMakes}</span>
             </label>
             {!form.allMakes ? (
               <TextField
                 error={errors.makesServiced}
-                label="Makes serviced"
+                label={messages.makesServiced}
                 name="makesServiced"
                 onChange={(value) => updateField("makesServiced", value)}
                 placeholder="Honda, Toyota, Ford"
@@ -231,19 +229,19 @@ export function ProviderSubmissionForm() {
               />
             ) : null}
             <TextField
-              label="Specialty makes"
+              label={messages.specialtyMakes}
               name="specialtyMakes"
               onChange={(value) => updateField("specialtyMakes", value)}
-              placeholder="Optional, comma-separated"
+              placeholder={messages.optionalComma}
               value={form.specialtyMakes}
             />
           </fieldset>
         </section>
 
         <section className="form-section" aria-labelledby="where-work">
-          <h2 id="where-work">Where do you work?</h2>
+          <h2 id="where-work">{messages.where}</h2>
           <fieldset className="service-options">
-            <legend>Work location</legend>
+            <legend>{messages.workLocation}</legend>
             <label className="service-choice">
               <input
                 checked={form.locationKind === "physical"}
@@ -251,7 +249,7 @@ export function ProviderSubmissionForm() {
                 onChange={() => updateField("locationKind", "physical")}
                 type="radio"
               />
-              <span>Physical shop</span>
+              <span>{messages.physical}</span>
             </label>
             <label className="service-choice">
               <input
@@ -260,24 +258,25 @@ export function ProviderSubmissionForm() {
                 onChange={() => updateField("locationKind", "mobile")}
                 type="radio"
               />
-              <span>Mobile mechanic</span>
+              <span>{messages.mobile}</span>
             </label>
             <FieldError id="location-kind-error" message={errors.locationKind} />
           </fieldset>
 
           {form.locationKind === "physical" ? (
             <div className="form-grid">
-              <TextField error={errors.street} label="Street address" name="street" onChange={(value) => updateField("street", value)} value={form.street} />
-              <TextField error={errors.city} label="City" name="city" onChange={(value) => updateField("city", value)} value={form.city} />
+              <TextField error={errors.street} label={messages.street} name="street" onChange={(value) => updateField("street", value)} value={form.street} />
+              <TextField error={errors.city} label={messages.city} name="city" onChange={(value) => updateField("city", value)} value={form.city} />
               <SelectField
                 error={errors.county}
-                label="County"
+                label={messages.county}
                 name="county"
                 onChange={(value) => updateField("county", value as LaunchCounty)}
                 options={LAUNCH_COUNTIES.map((county) => ({ value: county, label: county }))}
+                placeholder={messages.chooseOne}
                 value={form.county}
               />
-              <TextField error={errors.zip} inputMode="numeric" label="ZIP" name="zip" onChange={(value) => updateField("zip", value)} value={form.zip} />
+              <TextField error={errors.zip} inputMode="numeric" label={messages.zip} name="zip" onChange={(value) => updateField("zip", value)} value={form.zip} />
             </div>
           ) : null}
 
@@ -286,30 +285,30 @@ export function ProviderSubmissionForm() {
               <TextField
                 error={errors.serviceZipCodes}
                 inputMode="numeric"
-                label="Service ZIP codes"
+                label={messages.serviceZips}
                 name="serviceZipCodes"
                 onChange={(value) => updateField("serviceZipCodes", value)}
-                placeholder="33161, 33311"
+                placeholder={messages.serviceZipsPlaceholder}
                 value={form.serviceZipCodes}
               />
-              <p className="field-help">List exact ZIPs, or enter a base ZIP and radius below.</p>
+              <p className="field-help">{messages.serviceAreaHelp}</p>
               <div className="form-grid">
                 <TextField
                   error={errors.serviceBaseZip}
                   inputMode="numeric"
-                  label="Base ZIP"
+                  label={messages.baseZip}
                   name="serviceBaseZip"
                   onChange={(value) => updateField("serviceBaseZip", value)}
-                  placeholder="Optional"
+                  placeholder={messages.optional}
                   value={form.serviceBaseZip}
                 />
                 <TextField
                   error={errors.serviceRadiusMiles}
                   inputMode="numeric"
-                  label="Service radius (miles)"
+                  label={messages.radius}
                   name="serviceRadiusMiles"
                   onChange={(value) => updateField("serviceRadiusMiles", value)}
-                  placeholder="Optional, 1-100"
+                  placeholder={messages.radiusPlaceholder}
                   value={form.serviceRadiusMiles}
                 />
               </div>
@@ -318,10 +317,10 @@ export function ProviderSubmissionForm() {
         </section>
 
         <section className="form-section" aria-labelledby="profile-info">
-          <h2 id="profile-info">Build your profile</h2>
+          <h2 id="profile-info">{messages.profile}</h2>
           <TextAreaField
             error={errors.description}
-            label="Short description"
+            label={messages.description}
             name="description"
             onChange={(value) => updateField("description", value)}
             value={form.description}
@@ -329,14 +328,14 @@ export function ProviderSubmissionForm() {
           <TextField
             error={errors.yearsExperience}
             inputMode="numeric"
-            label="Years of experience"
+            label={messages.experience}
             name="yearsExperience"
             onChange={(value) => updateField("yearsExperience", value)}
-            placeholder="Optional"
+            placeholder={messages.optional}
             value={form.yearsExperience}
           />
           <fieldset className="service-options">
-            <legend>Languages spoken (optional)</legend>
+            <legend>{messages.languages}</legend>
             {(["English", "Spanish"] as const).map((language) => (
               <label className="service-choice" key={language}>
                 <input
@@ -344,40 +343,41 @@ export function ProviderSubmissionForm() {
                   onChange={() => toggleLanguage(language)}
                   type="checkbox"
                 />
-                <span>{language}</span>
+                <span>{language === "English" ? messages.english : messages.spanish}</span>
               </label>
             ))}
             <FieldError id="spoken-languages-error" message={errors.spokenLanguages} />
           </fieldset>
           <TextField
             error={errors.otherLanguage}
-            label="Another language"
+            label={messages.otherLanguage}
             name="otherLanguage"
             onChange={(value) => updateField("otherLanguage", value)}
-            placeholder="Optional, enter the language name"
+            placeholder={messages.otherLanguagePlaceholder}
             value={form.otherLanguage}
           />
-          <p className="field-help">Experience and languages are displayed as provider-reported claims.</p>
+          <p className="field-help">{messages.languages}</p>
           <TextField
-            label="Florida repair registration"
+            label={messages.registration}
             name="registrationNumber"
             onChange={(value) => updateField("registrationNumber", value)}
-            placeholder="Optional; submitted as unverified"
+            placeholder={messages.optional}
             value={form.registrationNumber}
           />
         </section>
 
         <section className="form-section" aria-labelledby="authorization">
-          <h2 id="authorization">Authorization</h2>
+          <h2 id="authorization">{messages.authorization}</h2>
           <SelectField
             error={errors.authorizationRelationship}
-            label="Who is creating this profile?"
+            label={messages.relationship}
             name="authorizationRelationship"
             onChange={(value) => updateField("authorizationRelationship", value as AuthorizationRelationship)}
             options={AUTHORIZATION_RELATIONSHIPS.map((relationship) => ({
               value: relationship,
-              label: RELATIONSHIP_LABELS[relationship]
+              label: ({ myself: messages.myself, "my-business": messages.myBusiness, "family-member": messages.family, "i-work-for-this-business": messages.employee })[relationship]
             }))}
+            placeholder={messages.chooseOne}
             value={form.authorizationRelationship}
           />
           <label className="service-choice">
@@ -386,13 +386,13 @@ export function ProviderSubmissionForm() {
               onChange={(event) => updateField("authorizationAttested", event.target.checked)}
               type="checkbox"
             />
-            <span>I am authorized to create or manage this business profile.</span>
+            <span>{messages.attest}</span>
           </label>
           <FieldError id="authorization-attested-error" message={errors.authorizationAttested} />
         </section>
 
         <button className="primary-action" disabled={isSubmitting} type="submit">
-          {isSubmitting ? "Submitting..." : "Submit for Review"}
+          {isSubmitting ? messages.submitting : messages.submit}
         </button>
       </form>
     </main>
@@ -468,6 +468,7 @@ function SelectField({
   name,
   onChange,
   options,
+  placeholder,
   value
 }: {
   error?: string;
@@ -475,6 +476,7 @@ function SelectField({
   name: string;
   onChange: (value: string) => void;
   options: { value: string; label: string }[];
+  placeholder: string;
   value: string;
 }) {
   return (
@@ -487,7 +489,7 @@ function SelectField({
         onChange={(event) => onChange(event.target.value)}
         value={value}
       >
-        <option value="">Choose one</option>
+        <option value="">{placeholder}</option>
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}

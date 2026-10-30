@@ -12,6 +12,8 @@ import type { ReviewPersistence, VerifyReviewOutcome } from "./reviewPersistence
 import { createReviewVerificationToken, hashReviewAbuseValue, hashReviewVerificationToken } from "./reviewSecurity.ts";
 import type { ReviewModerationInput, ReviewSubmissionFieldErrors, ReviewSubmissionInput } from "./reviewTypes.ts";
 import { normalizeReviewerEmail, validateReviewSubmission } from "./reviewValidation.ts";
+import { getPublicMessages } from "../i18n/messages.ts";
+import type { PublicLocale } from "../i18n/locale.ts";
 
 export type SubmitReviewResult =
   | { ok: true }
@@ -21,8 +23,10 @@ export async function submitCustomerReview(
   input: ReviewSubmissionInput,
   requestIp: string,
   persistence: ReviewPersistence,
-  options: { now?: Date; emailSender?: ReviewEmailSender; env?: NodeJS.ProcessEnv } = {}
+  options: { now?: Date; emailSender?: ReviewEmailSender; env?: NodeJS.ProcessEnv; locale?: PublicLocale } = {}
 ): Promise<SubmitReviewResult> {
+  const locale = options.locale ?? "en";
+  const messages = getPublicMessages(locale).reviewForm;
   const errors = validateReviewSubmission(input);
   if (Object.keys(errors).length) return { ok: false, errors };
 
@@ -31,7 +35,7 @@ export async function submitCustomerReview(
     config = getReviewDeliveryConfig(options.env);
   } catch (error) {
     if (error instanceof ReviewEmailConfigurationError) {
-      return { ok: false, formError: "Review email verification is not available yet. Please try again later." };
+      return { ok: false, formError: messages.emailUnavailable };
     }
     throw error;
   }
@@ -51,14 +55,14 @@ export async function submitCustomerReview(
     verificationExpiresAt: new Date(now.getTime() + 30 * 60 * 1000).toISOString()
   });
 
-  if (result.outcome === "rate-limited") return { ok: false, formError: "Too many review attempts. Please try again later." };
-  if (result.outcome === "duplicate") return { ok: false, formError: "A review for this provider could not be submitted again." };
-  if (result.outcome === "inactive-provider") return { ok: false, formError: "This provider is not currently eligible for reviews." };
+  if (result.outcome === "rate-limited") return { ok: false, formError: messages.rateLimited };
+  if (result.outcome === "duplicate") return { ok: false, formError: messages.duplicate };
+  if (result.outcome === "inactive-provider") return { ok: false, formError: messages.inactiveProvider };
   if (result.outcome !== "created" || !result.reviewId || !result.providerName) {
-    return { ok: false, formError: "Review submission could not be accepted." };
+    return { ok: false, formError: getPublicMessages(locale).validation.reviewRejected };
   }
 
-  const verificationUrl = new URL("/reviews/verify", config.siteUrl);
+  const verificationUrl = new URL(locale === "es" ? "/es/reviews/verify" : "/reviews/verify", config.siteUrl);
   verificationUrl.hash = `token=${token}`;
   const sender = options.emailSender ?? createResendReviewEmailSender(config);
   const delivered = await deliverReviewVerification(
@@ -68,13 +72,14 @@ export async function submitCustomerReview(
       recipient: email,
       providerName: result.providerName,
       verificationUrl: verificationUrl.toString(),
-      idempotencyKey: `review-verification-${tokenHash}`
+      idempotencyKey: `review-verification-${tokenHash}`,
+      locale
     },
     sender,
     persistence
   );
   if (!delivered) {
-    return { ok: false, formError: "The verification email could not be delivered. Please try again later." };
+    return { ok: false, formError: messages.deliveryFailed };
   }
 
   return { ok: true };

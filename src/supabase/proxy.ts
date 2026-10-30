@@ -3,13 +3,14 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getSupabaseClientSafeConfig, hasSupabaseClientSafeConfig } from "../config/supabaseEnvironment.ts";
 
-export async function updateSupabaseSession(request: NextRequest) {
+export async function updateSupabaseSession(request: NextRequest, requestHeaders: Headers = request.headers) {
+  const forwardedRequest = { headers: requestHeaders };
   if (!hasSupabaseClientSafeConfig()) {
-    return NextResponse.next({ request });
+    return NextResponse.next({ request: forwardedRequest });
   }
 
   const config = getSupabaseClientSafeConfig();
-  let response = NextResponse.next({ request });
+  let response = NextResponse.next({ request: forwardedRequest });
 
   const supabase = createServerClient(config.url, config.publishableKey, {
     cookies: {
@@ -18,7 +19,7 @@ export async function updateSupabaseSession(request: NextRequest) {
       },
       setAll(cookiesToSet) {
         cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-        response = NextResponse.next({ request });
+        response = NextResponse.next({ request: forwardedRequest });
         cookiesToSet.forEach(({ name, value, options }) => {
           response.cookies.set(name, value, options);
         });

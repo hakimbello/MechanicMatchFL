@@ -12,7 +12,7 @@ import {
 } from "../src/domain/providers.ts";
 import {
   EMPTY_SEARCH_FORM,
-  SERVICE_OPTIONS,
+  getServiceOptions,
   VEHICLE_MAKE_OPTIONS,
   VEHICLE_YEAR_OPTIONS,
   runProviderSearch,
@@ -20,6 +20,8 @@ import {
   type SearchFieldErrors,
   type SearchResultView
 } from "../src/search/search.ts";
+import { formatMessage, getPublicMessages } from "../src/i18n/messages.ts";
+import type { PublicLocale } from "../src/i18n/locale.ts";
 
 const FIELD_IDS = {
   year: "vehicle-year",
@@ -29,15 +31,17 @@ const FIELD_IDS = {
   zip: "customer-zip"
 } as const;
 
-export function MechanicSearchExperience({ providers }: { providers: Provider[] }) {
+export function MechanicSearchExperience({ providers, locale = "en" }: { providers: Provider[]; locale?: PublicLocale }) {
+  const messages = getPublicMessages(locale);
+  const serviceOptions = getServiceOptions(locale);
   const [form, setForm] = useState<SearchFormInput>(EMPTY_SEARCH_FORM);
   const [errors, setErrors] = useState<SearchFieldErrors>({});
   const [results, setResults] = useState<SearchResultView[] | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
 
   const selectedServiceLabel = useMemo(
-    () => SERVICE_OPTIONS.find((option) => option.value === form.serviceCategory)?.label,
-    [form.serviceCategory]
+    () => serviceOptions.find((option) => option.value === form.serviceCategory)?.label,
+    [form.serviceCategory, serviceOptions]
   );
 
   function updateField(field: keyof SearchFormInput, value: string) {
@@ -51,7 +55,7 @@ export function MechanicSearchExperience({ providers }: { providers: Provider[] 
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const search = runProviderSearch(form, providers);
+    const search = runProviderSearch(form, providers, locale);
 
     setHasSearched(true);
     if (!search.ok) {
@@ -77,21 +81,18 @@ export function MechanicSearchExperience({ providers }: { providers: Provider[] 
     <main className="page-shell">
       <section className="search-hero" aria-labelledby="page-title">
         <div className="hero-copy">
-          <p className="eyebrow">Miami-Dade and Broward</p>
-          <h1 id="page-title">Find the right mechanic for your car.</h1>
-          <p className="intro">
-            MechanicMatchFL helps South Florida drivers find relevant local repair providers based on
-            vehicle, repair need, and ZIP code, including independent shops, mobile mechanics, and specialists.
-          </p>
-          <Link className="provider-entry-link" href="/list-your-business">
-            Are you a mechanic? List your business
+          <p className="eyebrow">{messages.home.region}</p>
+          <h1 id="page-title">{messages.home.title}</h1>
+          <p className="intro">{messages.home.intro}</p>
+          <Link className="provider-entry-link" href={locale === "es" ? "/es/list-your-business" : "/list-your-business"}>
+            {messages.home.providerCta}
           </Link>
         </div>
 
         <form className="search-panel" onSubmit={handleSubmit} noValidate>
           <div className="form-grid">
             <div className="field-group">
-              <label htmlFor={FIELD_IDS.year}>Year</label>
+              <label htmlFor={FIELD_IDS.year}>{messages.home.year}</label>
               <select
                 id={FIELD_IDS.year}
                 value={form.year}
@@ -99,7 +100,7 @@ export function MechanicSearchExperience({ providers }: { providers: Provider[] 
                 aria-describedby={errors.year ? `${FIELD_IDS.year}-error` : undefined}
                 aria-invalid={Boolean(errors.year)}
               >
-                <option value="">Select year</option>
+                <option value="">{messages.home.selectYear}</option>
                 {VEHICLE_YEAR_OPTIONS.map((year) => (
                   <option key={year} value={year}>
                     {year}
@@ -110,7 +111,7 @@ export function MechanicSearchExperience({ providers }: { providers: Provider[] 
             </div>
 
             <div className="field-group">
-              <label htmlFor={FIELD_IDS.make}>Make</label>
+              <label htmlFor={FIELD_IDS.make}>{messages.home.make}</label>
               <input
                 id={FIELD_IDS.make}
                 name="make"
@@ -130,7 +131,7 @@ export function MechanicSearchExperience({ providers }: { providers: Provider[] 
             </div>
 
             <div className="field-group">
-              <label htmlFor={FIELD_IDS.model}>Model</label>
+              <label htmlFor={FIELD_IDS.model}>{messages.home.model}</label>
               <input
                 id={FIELD_IDS.model}
                 name="model"
@@ -145,9 +146,9 @@ export function MechanicSearchExperience({ providers }: { providers: Provider[] 
           </div>
 
           <fieldset className="service-options" aria-describedby={errors.serviceCategory ? "service-error" : undefined}>
-            <legend>Repair or service need</legend>
+            <legend>{messages.home.serviceNeed}</legend>
             <div className="service-grid">
-              {SERVICE_OPTIONS.map((option) => (
+              {serviceOptions.map((option) => (
                 <label className="service-choice" key={option.value}>
                   <input
                     type="radio"
@@ -164,7 +165,7 @@ export function MechanicSearchExperience({ providers }: { providers: Provider[] 
           </fieldset>
 
           <div className="field-group zip-field">
-            <label htmlFor={FIELD_IDS.zip}>ZIP code</label>
+            <label htmlFor={FIELD_IDS.zip}>{messages.home.zip}</label>
             <input
               id={FIELD_IDS.zip}
               name="zip"
@@ -177,29 +178,29 @@ export function MechanicSearchExperience({ providers }: { providers: Provider[] 
               aria-invalid={Boolean(errors.zip)}
             />
             <p id="zip-help" className="field-help">
-              Enter a Miami-Dade or Broward ZIP.
+              {messages.home.zipHelp}
             </p>
             <FieldError id={`${FIELD_IDS.zip}-error`} message={errors.zip} />
           </div>
 
           <button className="primary-action" type="submit">
-            Find My Mechanic
+            {messages.home.submit}
           </button>
         </form>
       </section>
 
       <section className="results-section" aria-live="polite" aria-labelledby="results-title">
         <div className="results-heading">
-          <p className="eyebrow">Matches</p>
+          <p className="eyebrow">{messages.home.matches}</p>
           <h2 id="results-title">
-            {hasSearched ? "Recommended mechanics" : "Your results will appear here"}
+            {hasSearched ? messages.home.recommended : messages.home.resultsPlaceholder}
           </h2>
           {hasSearched && selectedServiceLabel ? (
             <p>
-              Showing providers for {selectedServiceLabel} near {form.zip}.
+              {formatMessage(messages.home.showing, { service: selectedServiceLabel, zip: form.zip })}
             </p>
           ) : (
-            <p>Search by vehicle, repair need, and ZIP code to see relevant providers.</p>
+            <p>{messages.home.searchHelp}</p>
           )}
         </div>
 
@@ -207,7 +208,7 @@ export function MechanicSearchExperience({ providers }: { providers: Provider[] 
           <div className="result-list">
             {results.map((result, index) => (
               <article className="result-card" key={result.id}>
-                <div className="result-rank" aria-label={`Result ${index + 1}`}>
+                <div className="result-rank" aria-label={formatMessage(messages.home.result, { number: index + 1 })}>
                   {index + 1}
                 </div>
                 <div className="result-content">
@@ -216,17 +217,17 @@ export function MechanicSearchExperience({ providers }: { providers: Provider[] 
                       <p className="provider-type">{result.providerType}</p>
                       <h3>{result.name}</h3>
                     </div>
-                    {result.verified ? <span className="verified-badge">Verified</span> : null}
+                    {result.verified ? <span className="verified-badge">{messages.home.verified}</span> : null}
                   </div>
                   <p className="result-location">{result.locationLine}</p>
-                  <ul className="reason-list" aria-label={`Why ${result.name} is a match`}>
+                  <ul className="reason-list" aria-label={formatMessage(messages.home.whyMatch, { name: result.name })}>
                     {result.reasons.map((reason) => (
                       <li key={reason}>{reason}</li>
                     ))}
                   </ul>
                   {result.description ? <p className="description">{result.description}</p> : null}
                   <Link className="secondary-action" href={result.profileHref}>
-                    View Profile
+                    {messages.home.viewProfile}
                   </Link>
                 </div>
               </article>
@@ -236,8 +237,8 @@ export function MechanicSearchExperience({ providers }: { providers: Provider[] 
 
         {results && results.length === 0 ? (
           <div className="empty-state" role="status">
-            <h3>No matching mechanics found for this search yet.</h3>
-            <p>Try a different repair need, vehicle make, or ZIP code.</p>
+            <h3>{messages.home.noMatches}</h3>
+            <p>{messages.home.noMatchesHelp}</p>
           </div>
         ) : null}
       </section>

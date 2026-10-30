@@ -4,5 +4,5 @@ import { listBusinessMetadata } from "../../src/seo/metadata.ts";
 export const metadata = listBusinessMetadata;
 
 export default function ListYourBusinessPage() {
-  return <ProviderSubmissionForm />;
+  return <ProviderSubmissionForm locale="en" />;
 }

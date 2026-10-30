@@ -1,4 +1,6 @@
 import type { CustomerServiceCategory, Provider, ProviderSpecialty } from "../domain/providers.ts";
+import { getPublicMessages } from "../i18n/messages.ts";
+import type { PublicLocale } from "../i18n/locale.ts";
 
 export const PROVIDER_TYPE_LABELS: Record<Provider["type"], string> = {
   "independent-auto-repair-shop": "Independent repair shop",
@@ -43,18 +45,18 @@ export const SPECIALTY_LABELS: Record<ProviderSpecialty, string> = {
   alignment: "Alignment"
 };
 
-export function formatProviderType(type: Provider["type"]): string {
-  return PROVIDER_TYPE_LABELS[type];
+export function formatProviderType(type: Provider["type"], locale: PublicLocale = "en"): string {
+  return getPublicMessages(locale).presentation.providerTypes[type];
 }
 
-export function formatLocationKind(kind: Provider["locationKind"]): string {
-  return LOCATION_KIND_LABELS[kind];
+export function formatLocationKind(kind: Provider["locationKind"], locale: PublicLocale = "en"): string {
+  return getPublicMessages(locale).presentation.locationKinds[kind];
 }
 
-export function formatServiceCategory(category: CustomerServiceCategory): string {
-  return SERVICE_CATEGORY_LABELS[category];
+export function formatServiceCategory(category: CustomerServiceCategory, locale: PublicLocale = "en"): string {
+  return getPublicMessages(locale).presentation.services[category];
 }
 
-export function formatSpecialty(specialty: ProviderSpecialty): string {
-  return SPECIALTY_LABELS[specialty];
+export function formatSpecialty(specialty: ProviderSpecialty, locale: PublicLocale = "en"): string {
+  return getPublicMessages(locale).presentation.specialties[specialty];
 }

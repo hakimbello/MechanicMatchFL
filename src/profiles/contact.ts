@@ -1,4 +1,6 @@
 import type { Provider } from "../domain/providers.ts";
+import { getPublicMessages } from "../i18n/messages.ts";
+import type { PublicLocale } from "../i18n/locale.ts";
 
 export type ContactMethod = "phone" | "email" | "website";
 
@@ -11,17 +13,17 @@ export interface ContactAction {
   external: boolean;
 }
 
-export function buildContactActions(provider: Provider): ContactAction[] {
+export function buildContactActions(provider: Provider, locale: PublicLocale = "en"): ContactAction[] {
   const actions = [
-    buildPhoneAction(provider.contact?.phone),
-    buildEmailAction(provider.contact?.email),
-    buildWebsiteAction(provider.contact?.website)
+    buildPhoneAction(provider.contact?.phone, locale),
+    buildEmailAction(provider.contact?.email, locale),
+    buildWebsiteAction(provider.contact?.website, locale)
   ].filter((action): action is ContactAction => Boolean(action));
 
   return actions.sort((left, right) => Number(right.primary) - Number(left.primary));
 }
 
-export function buildPhoneAction(phone?: string): ContactAction | null {
+export function buildPhoneAction(phone?: string, locale: PublicLocale = "en"): ContactAction | null {
   if (!phone) {
     return null;
   }
@@ -35,7 +37,7 @@ export function buildPhoneAction(phone?: string): ContactAction | null {
 
   return {
     method: "phone",
-    label: "Call Mechanic",
+    label: getPublicMessages(locale).presentation.call,
     href: `tel:+1${normalized}`,
     displayValue: formatPhone(normalized),
     primary: true,
@@ -43,7 +45,7 @@ export function buildPhoneAction(phone?: string): ContactAction | null {
   };
 }
 
-export function buildEmailAction(email?: string): ContactAction | null {
+export function buildEmailAction(email?: string, locale: PublicLocale = "en"): ContactAction | null {
   if (!email) {
     return null;
   }
@@ -55,7 +57,7 @@ export function buildEmailAction(email?: string): ContactAction | null {
 
   return {
     method: "email",
-    label: "Email Mechanic",
+    label: getPublicMessages(locale).presentation.email,
     href: `mailto:${normalized}`,
     displayValue: normalized,
     primary: false,
@@ -63,7 +65,7 @@ export function buildEmailAction(email?: string): ContactAction | null {
   };
 }
 
-export function buildWebsiteAction(website?: string): ContactAction | null {
+export function buildWebsiteAction(website?: string, locale: PublicLocale = "en"): ContactAction | null {
   if (!website) {
     return null;
   }
@@ -81,7 +83,7 @@ export function buildWebsiteAction(website?: string): ContactAction | null {
 
   return {
     method: "website",
-    label: "Visit Website",
+    label: getPublicMessages(locale).presentation.website,
     href: url.toString(),
     displayValue: url.hostname,
     primary: false,

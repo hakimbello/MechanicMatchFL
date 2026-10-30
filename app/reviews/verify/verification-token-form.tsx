@@ -3,8 +3,11 @@
 import { useEffect, useState } from "react";
 
 import { verifyReviewEmailAction } from "./actions";
+import { getPublicMessages } from "../../../src/i18n/messages.ts";
+import type { PublicLocale } from "../../../src/i18n/locale.ts";
 
-export function VerificationTokenForm() {
+export function VerificationTokenForm({ locale = "en" }: { locale?: PublicLocale }) {
+  const messages = getPublicMessages(locale).verification;
   const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
@@ -15,13 +18,14 @@ export function VerificationTokenForm() {
     setToken(/^[A-Za-z0-9_-]{40,60}$/.test(fragmentToken) ? fragmentToken : "");
   }, []);
 
-  if (token === null) return <p className="muted-text" role="status">Preparing secure verification...</p>;
-  if (!token) return <p className="intro" role="alert">This verification link is invalid. The review was not published.</p>;
+  if (token === null) return <p className="muted-text" role="status">{messages.preparing}</p>;
+  if (!token) return <p className="intro" role="alert">{messages.invalidLink}</p>;
 
   return (
     <form action={verifyReviewEmailAction}>
       <input name="token" type="hidden" value={token} />
-      <button className="primary-action" type="submit">Verify email</button>
+      <input name="locale" type="hidden" value={locale} />
+      <button className="primary-action" type="submit">{messages.button}</button>
     </form>
   );
 }

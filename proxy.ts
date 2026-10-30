@@ -3,7 +3,9 @@ import type { NextRequest } from "next/server";
 import { updateSupabaseSession } from "./src/supabase/proxy.ts";
 
 export async function proxy(request: NextRequest) {
-  return updateSupabaseSession(request);
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-mechanicmatch-locale", request.nextUrl.pathname === "/es" || request.nextUrl.pathname.startsWith("/es/") ? "es" : "en");
+  return updateSupabaseSession(request, requestHeaders);
 }
 
 export const config = {
