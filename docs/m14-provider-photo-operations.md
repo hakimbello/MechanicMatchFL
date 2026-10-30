@@ -19,6 +19,8 @@ No live migration or bucket creation is part of the code milestone.
 - Only single-frame JPEG, PNG, and WebP inputs are accepted.
 - A new WebP, no larger than 1600 by 1200, is encoded without source metadata. Public delivery never serves the original bytes.
 - Original and normalized objects use generated UUID keys and remain in the private bucket.
+- After both uploads succeed, the server-only client creates a 15-minute private upload ticket bound to the user returned by a fresh Supabase `auth.getUser()` call. The authenticated RPC accepts only the ticket ID, derives `auth.uid()`, locks the ticket, verifies object existence and ownership eligibility, and consumes it atomically.
+- Browser fields cannot supply an Auth user ID, ticket owner, storage path, moderation state, or publication state.
 - The public route accepts a provider ID, resolves an approved photo through the active/non-suspended public projection, then streams the normalized object. It never returns an object key or signed URL.
 
 ## Moderation and retention
@@ -34,6 +36,8 @@ No live migration or bucket creation is part of the code milestone.
 
 - If either object upload fails, any successfully uploaded object is removed best-effort and no database row is created.
 - If database creation fails after uploads, both objects are removed best-effort.
+- Failed finalization also removes the private upload ticket best-effort. Expired unconsumed tickets must be reconciled with opaque orphan objects before deletion.
+- If the authenticated RPC response is ambiguous, the server reads the ticket through the private client. A consumed ticket proves the photo transaction committed. If ticket state cannot be established, objects are preserved for reconciliation rather than risking deletion beneath a committed photo row.
 - Moderation changes database visibility only; it does not move or rewrite objects, so a storage outage cannot partially publish a replacement.
 - A missing approved normalized object produces a public 404. Reconcile storage and database state; do not approve another photo solely to conceal the failure.
 
@@ -45,7 +49,8 @@ The rollback refuses to run while photo rows, moderation history, or bucket obje
 2. Export photo records and history to an approved secure location.
 3. Resolve active investigations and retention holds.
 4. Explicitly remove Storage objects through an audited service-role operation.
-5. Remove database photo records only with owner approval.
-6. Run the guarded rollback and verify the bucket, policies, view, functions, tables, and enum are removed.
+5. Reconcile and remove expired or consumed upload tickets.
+6. Remove database photo records only with owner approval.
+7. Run the guarded rollback and verify the bucket, policies, view, functions, tables, and enum are removed.
 
 Rollback never silently deletes photo evidence.

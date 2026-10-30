@@ -9,7 +9,7 @@ import {
   PROVIDER_PHOTO_LIMITS,
   ProviderPhotoValidationError
 } from "../src/photos/photoProcessing.ts";
-import { persistPhotoUpload, type PhotoObjectStore, type PhotoRecordStore } from "../src/photos/photoUploadTransaction.ts";
+import { persistPhotoUpload, PhotoFinalizationStateUnknownError, type PhotoObjectStore, type PhotoRecordStore } from "../src/photos/photoUploadTransaction.ts";
 import type { ProcessedProviderPhoto } from "../src/photos/photoTypes.ts";
 
 const migration = readFileSync("supabase/migrations/202610300001_add_m14_provider_photos.sql", "utf8");
@@ -94,7 +94,6 @@ const processed: ProcessedProviderPhoto = {
 
 function uploadInput() {
   return {
-    userId: "user",
     providerId: "provider",
     originalObjectKey: "original/00000000-0000-4000-8000-000000000000.png",
     normalizedObjectKey: "normalized/00000000-0000-4000-8000-000000000000.webp",
@@ -136,16 +135,60 @@ test("database failure removes both private objects and cleanup failure does not
   await assert.rejects(() => persistPhotoUpload(uploadInput(), cleanupFailure, records), /database failure/);
 });
 
-test("photo submission is service-role-only and bound to an approved active owner", () => {
+test("ambiguous finalization preserves private objects for reconciliation", async () => {
+  let removed = false;
+  const objects: PhotoObjectStore = {
+    async upload() {},
+    async remove() { removed = true; }
+  };
+  const records: PhotoRecordStore = {
+    async create() { throw new PhotoFinalizationStateUnknownError(); }
+  };
+  await assert.rejects(() => persistPhotoUpload(uploadInput(), objects, records), PhotoFinalizationStateUnknownError);
+  assert.equal(removed, false);
+});
+
+test("photo submission derives auth.uid and consumes a matching private upload ticket", () => {
   const submit = functionDefinition("submit_provider_photo");
-  assert.match(submit, /p_auth_user_id uuid/i);
-  assert.match(submit, /c\.auth_user_id = p_auth_user_id/i);
+  assert.match(submit, /v_user uuid := auth\.uid\(\)/i);
+  assert.doesNotMatch(submit, /p_auth_user_id|p_provider_id|p_original_object_key/i);
+  assert.match(submit, /auth_user_id = v_user/i);
+  assert.match(submit, /c\.provider_id = v_ticket\.provider_id/i);
+  assert.match(submit, /consumed_at is null/i);
+  assert.match(submit, /expires_at > now\(\)/i);
+  assert.match(submit, /for update/i);
+  assert.match(submit, /storage\.objects[\s\S]*v_ticket\.original_object_key/i);
+  assert.match(submit, /storage\.objects[\s\S]*v_ticket\.normalized_object_key/i);
+  assert.match(submit, /set consumed_at = now\(\)/i);
   assert.match(submit, /c\.status = 'approved'/i);
   assert.match(submit, /p\.status = 'active'/i);
   assert.match(submit, /provider_suspensions[\s\S]*s\.status = 'active'/i);
-  assert.match(submit, /p_consent_attested is not true/i);
-  assert.match(migration, /grant execute on function public\.submit_provider_photo\([^;]+\) to service_role/i);
-  assert.doesNotMatch(migration, /grant execute on function public\.submit_provider_photo\([^;]+\) to (anon|authenticated)/i);
+  assert.match(migration, /grant execute on function public\.submit_provider_photo\(uuid\) to authenticated/i);
+  assert.doesNotMatch(migration, /grant execute on function public\.submit_provider_photo\(uuid\) to (anon|service_role)/i);
+});
+
+test("the browser cannot forge photo identity, provider ownership, or object paths", () => {
+  const action = readFileSync("app/provider/account/actions.ts", "utf8");
+  const auth = readFileSync("src/providers/providerAuth.ts", "utf8");
+  const persistence = readFileSync("src/photos/supabasePhotoPersistence.ts", "utf8");
+  const runtime = readFileSync("src/photos/runtimePhotoPersistence.ts", "utf8");
+  assert.match(action, /getProviderAuthentication/);
+  assert.match(auth, /auth\.getUser\(\)/);
+  assert.doesNotMatch(action, /formData\.get\(["'](?:user|userId|authUserId|objectKey|status)/i);
+  assert.match(persistence, /authenticatedClient\.auth\.getUser\(\)/);
+  assert.match(persistence, /^import "server-only";/);
+  assert.match(runtime, /^import "server-only";/);
+  assert.match(persistence, /auth_user_id: user\.id/i);
+  assert.match(persistence, /from\("provider_photo_upload_tickets"\)[\s\S]*\.insert/i);
+  assert.match(persistence, /authenticatedClient!\.rpc\("submit_provider_photo"[\s\S]*p_upload_ticket_id/i);
+  assert.doesNotMatch(persistence, /p_auth_user_id|p_provider_id|p_original_object_key/);
+  assert.doesNotMatch(action, /SUPABASE_SECRET_KEY|createSupabasePrivilegedDataClient|service_role/i);
+  assert.match(migration, /revoke all on table public\.provider_photo_upload_tickets from public, anon, authenticated/i);
+  assert.match(migration, /grant select, insert, delete on table public\.provider_photo_upload_tickets to service_role/i);
+  assert.match(persistence, /provider_photo_upload_tickets"[\s\S]*\.delete\(\)[\s\S]*\.eq\("id", ticket\.id\)/i);
+  assert.match(persistence, /select\("consumed_at"\)/i);
+  assert.match(persistence, /ticketState\?\.consumed_at/i);
+  assert.match(persistence, /PhotoFinalizationStateUnknownError/);
 });
 
 test("storage paths are server-generated, constrained, private, and absent from public projections", () => {
@@ -188,6 +231,16 @@ test("rejection and safety removal keep private evidence and require an authoriz
   assert.doesNotMatch(moderate + remove, /delete from public\.provider_photos|storage\.objects/i);
 });
 
+test("simultaneous moderation decisions serialize and only a pending row can win", () => {
+  const moderate = functionDefinition("admin_moderate_provider_photo");
+  const remove = functionDefinition("admin_remove_provider_photo");
+  assert.match(moderate, /where id = p_photo_id and status = 'pending' for update/i);
+  assert.match(moderate, /where provider_id = v_photo\.provider_id for update/i);
+  assert.match(remove, /where id = p_photo_id and status = 'approved'/i);
+  assert.match(migration, /provider_photos_one_approved_idx[\s\S]*where status = 'approved'/i);
+  assert.match(moderate, /exception when unique_violation then return false/i);
+});
+
 test("M14 functions use empty search paths and least-privilege grants", () => {
   for (const name of ["submit_provider_photo", "admin_moderate_provider_photo", "admin_remove_provider_photo"]) {
     assert.match(functionDefinition(name), /security definer set search_path = ''/i, name);
@@ -201,6 +254,7 @@ test("M14 does not replace M11-M13 public views and rollback is evidence-guarded
   assert.doesNotMatch(migration, /create or replace view public\.(active_public_providers|approved_public_reviews|approved_public_provider_responses)/i);
   assert.match(rollback, /Cannot roll back M14 while provider photo records or moderation history exist/i);
   assert.match(rollback, /Cannot roll back M14 while private provider photo objects exist/i);
+  assert.match(rollback, /Cannot roll back M14 while provider photo upload tickets exist/i);
   assert.ok(rollback.indexOf("drop function") < rollback.indexOf("drop table"));
   assert.doesNotMatch(rollback, /cascade/i);
 });
@@ -220,10 +274,26 @@ test("application delivery never exposes signed URLs or private object keys", ()
   assert.match(profile, /\/provider-photos\//);
 });
 
+test("public downloads recheck approved, claimed, active, and non-suspended eligibility", () => {
+  const persistence = readFileSync("src/photos/supabasePhotoPersistence.ts", "utf8");
+  const view = migration.match(/create or replace view public\.approved_public_provider_photos[\s\S]*?;\s*\n\s*revoke/i)?.[0] ?? "";
+  assert.match(persistence, /downloadPublicPhoto[\s\S]*getPublicPhoto\(providerId\)/i);
+  assert.match(persistence, /downloadPhotoObject\(photo\.id, true\)/i);
+  assert.match(persistence, /const confirmed = await this\.getPublicPhoto\(providerId\)/i);
+  assert.match(persistence, /confirmed\?\.id === photo\.id \? object : null/i);
+  assert.match(persistence, /if \(requireApproved\) query = query\.eq\("status", "approved"\)/i);
+  assert.match(view, /ph\.status = 'approved'/i);
+  assert.match(view, /c\.status = 'approved'/i);
+  assert.match(view, /p\.status = 'active'/i);
+  assert.match(view, /not exists[\s\S]*provider_suspensions/i);
+  assert.doesNotMatch(view, /rejected|removed/);
+});
+
 test("operations documentation covers private originals, cleanup, retention, and guarded rollback", () => {
   assert.match(runbook, /Original and normalized objects[\s\S]*private bucket/i);
   assert.match(runbook, /retained for 30 days/i);
   assert.match(runbook, /orphan objects/i);
+  assert.match(runbook, /auth\.getUser\(\)[\s\S]*auth\.uid\(\)/i);
   assert.match(runbook, /Rollback never silently deletes photo evidence/i);
   assert.match(runbook, /No live migration or bucket creation/i);
 });

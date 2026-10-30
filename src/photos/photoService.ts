@@ -4,7 +4,7 @@ import type { PhotoPersistence } from "./photoPersistence.ts";
 import { createOpaquePhotoObjectKeys, processProviderPhoto, PROVIDER_PHOTO_LIMITS, ProviderPhotoValidationError } from "./photoProcessing.ts";
 
 export async function submitProviderPhoto(
-  input: { userId: string; providerId: string; file: File; consentAttested: boolean },
+  input: { providerId: string; file: File; consentAttested: boolean },
   persistence: PhotoPersistence
 ) {
   if (!input.providerId.trim()) return { ok: false as const, error: "Choose a provider." };
@@ -15,7 +15,6 @@ export async function submitProviderPhoto(
     const photo = await processProviderPhoto(new Uint8Array(await input.file.arrayBuffer()));
     const keys = createOpaquePhotoObjectKeys(photo.originalExtension);
     await persistence.submitPhoto({
-      userId: input.userId,
       providerId: input.providerId.trim(),
       photo,
       ...keys,

@@ -6,6 +6,32 @@ do $$ begin
 exception when duplicate_object then null;
 end $$;
 
+create table if not exists public.provider_photo_upload_tickets (
+  id uuid primary key default gen_random_uuid(),
+  auth_user_id uuid not null references auth.users(id) on delete restrict,
+  provider_id text not null references public.provider_records(id) on delete restrict,
+  original_object_key text not null unique check (
+    original_object_key ~ '^original/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|webp)$'
+  ),
+  normalized_object_key text not null unique check (
+    normalized_object_key ~ '^normalized/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.webp$'
+  ),
+  original_media_type text not null check (original_media_type in ('image/jpeg', 'image/png', 'image/webp')),
+  byte_size integer not null check (byte_size between 1 and 4194304),
+  width integer not null check (width between 1 and 1600),
+  height integer not null check (height between 1 and 1200),
+  content_sha256 text not null check (content_sha256 ~ '^[0-9a-f]{64}$'),
+  consent_attested boolean not null check (consent_attested),
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null default (now() + interval '15 minutes'),
+  consumed_at timestamptz,
+  constraint provider_photo_ticket_media_extension check (
+    (original_media_type = 'image/jpeg' and original_object_key like '%.jpg')
+    or (original_media_type = 'image/png' and original_object_key like '%.png')
+    or (original_media_type = 'image/webp' and original_object_key like '%.webp')
+  )
+);
+
 create table if not exists public.provider_photos (
   id uuid primary key default gen_random_uuid(),
   provider_id text not null references public.provider_records(id) on delete restrict,
@@ -57,10 +83,13 @@ create table if not exists public.provider_photo_history (
   created_at timestamptz not null default now()
 );
 
+alter table public.provider_photo_upload_tickets enable row level security;
 alter table public.provider_photos enable row level security;
 alter table public.provider_photo_history enable row level security;
+revoke all on table public.provider_photo_upload_tickets from public, anon, authenticated;
 revoke all on table public.provider_photos from anon, authenticated;
 revoke all on table public.provider_photo_history from anon, authenticated;
+grant select, insert, delete on table public.provider_photo_upload_tickets to service_role;
 
 drop trigger if exists touch_provider_photos_updated_at on public.provider_photos;
 create trigger touch_provider_photos_updated_at
@@ -88,35 +117,38 @@ using (bucket_id <> 'provider-photos-private')
 with check (bucket_id <> 'provider-photos-private');
 
 create or replace function public.submit_provider_photo(
-  p_auth_user_id uuid,
-  p_provider_id text,
-  p_original_object_key text,
-  p_normalized_object_key text,
-  p_original_media_type text,
-  p_byte_size integer,
-  p_width integer,
-  p_height integer,
-  p_content_sha256 text,
-  p_consent_attested boolean
+  p_upload_ticket_id uuid
 )
 returns boolean language plpgsql security definer set search_path = '' as $$
-declare v_claim public.provider_claims%rowtype; v_photo_id uuid;
+declare
+  v_user uuid := auth.uid();
+  v_ticket public.provider_photo_upload_tickets%rowtype;
+  v_claim public.provider_claims%rowtype;
+  v_photo_id uuid;
 begin
-  if p_auth_user_id is null or p_consent_attested is not true
-    or p_original_media_type not in ('image/jpeg', 'image/png', 'image/webp')
-    or p_byte_size not between 1 and 4194304
-    or p_width not between 1 and 1600
-    or p_height not between 1 and 1200
-    or p_content_sha256 !~ '^[0-9a-f]{64}$'
-    or p_original_object_key !~ '^original/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|webp)$'
-    or p_normalized_object_key !~ '^normalized/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.webp$'
-  then return false; end if;
+  if v_user is null then return false; end if;
+  select * into v_ticket
+  from public.provider_photo_upload_tickets
+  where id = p_upload_ticket_id
+    and auth_user_id = v_user
+    and consumed_at is null
+    and expires_at > now()
+  for update;
+  if not found then return false; end if;
+
+  if not exists (
+    select 1 from storage.objects
+    where bucket_id = 'provider-photos-private' and name = v_ticket.original_object_key
+  ) or not exists (
+    select 1 from storage.objects
+    where bucket_id = 'provider-photos-private' and name = v_ticket.normalized_object_key
+  ) then return false; end if;
 
   select c.* into v_claim
   from public.provider_claims c
   join public.provider_records p on p.id = c.provider_id
-  where c.provider_id = p_provider_id
-    and c.auth_user_id = p_auth_user_id
+  where c.provider_id = v_ticket.provider_id
+    and c.auth_user_id = v_user
     and c.status = 'approved'
     and p.status = 'active'
     and not exists (
@@ -130,11 +162,13 @@ begin
     provider_id, claim_id, submitted_by, original_object_key, normalized_object_key,
     original_media_type, byte_size, width, height, content_sha256, consent_attested_at
   ) values (
-    p_provider_id, v_claim.id, p_auth_user_id, p_original_object_key, p_normalized_object_key,
-    p_original_media_type, p_byte_size, p_width, p_height, p_content_sha256, now()
+    v_ticket.provider_id, v_claim.id, v_user, v_ticket.original_object_key, v_ticket.normalized_object_key,
+    v_ticket.original_media_type, v_ticket.byte_size, v_ticket.width, v_ticket.height,
+    v_ticket.content_sha256, now()
   ) returning id into v_photo_id;
   insert into public.provider_photo_history(photo_id, to_status, actor_user_id, reason)
-  values (v_photo_id, 'pending', p_auth_user_id, 'Provider submitted a normalized photo for administrator review.');
+  values (v_photo_id, 'pending', v_user, 'Provider submitted a normalized photo for administrator review.');
+  update public.provider_photo_upload_tickets set consumed_at = now() where id = v_ticket.id;
   return true;
 exception when unique_violation then return false;
 end;
@@ -234,10 +268,10 @@ where ph.status = 'approved'
     where s.provider_id = p.id and s.status = 'active'
   );
 
-revoke execute on function public.submit_provider_photo(uuid,text,text,text,text,integer,integer,integer,text,boolean) from public, anon, authenticated;
+revoke execute on function public.submit_provider_photo(uuid) from public, anon, authenticated;
 revoke execute on function public.admin_moderate_provider_photo(uuid,text,text) from public, anon, authenticated;
 revoke execute on function public.admin_remove_provider_photo(uuid,text) from public, anon, authenticated;
-grant execute on function public.submit_provider_photo(uuid,text,text,text,text,integer,integer,integer,text,boolean) to service_role;
+grant execute on function public.submit_provider_photo(uuid) to authenticated;
 grant execute on function public.admin_moderate_provider_photo(uuid,text,text) to authenticated;
 grant execute on function public.admin_remove_provider_photo(uuid,text) to authenticated;
 
@@ -245,4 +279,5 @@ revoke all on table public.approved_public_provider_photos from public;
 grant select on table public.approved_public_provider_photos to anon, authenticated;
 
 comment on table public.provider_photos is 'Private original and normalized object keys plus moderation state. Object keys are never public.';
+comment on table public.provider_photo_upload_tickets is 'Private short-lived server-created tickets consumed only by the matching authenticated user.';
 comment on view public.approved_public_provider_photos is 'Approved photo metadata for active, non-suspended providers; excludes storage keys and ownership data.';

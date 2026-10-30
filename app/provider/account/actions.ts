@@ -15,7 +15,6 @@ async function context() {
   if (!authentication.ok) redirect("/provider/login");
   const client = await createSupabaseServerAuthClient();
   return {
-    userId: authentication.user.userId,
     persistence: getTrustPersistenceForRuntime(client),
     photoPersistence: getPhotoPersistenceForRuntime(client)
   };
@@ -46,12 +45,11 @@ export async function submitAppealAction(formData: FormData) {
 }
 
 export async function submitPhotoAction(formData: FormData) {
-  const { userId, photoPersistence } = await context();
+  const { photoPersistence } = await context();
   const file = formData.get("photo");
   if (!(file instanceof File)) redirect("/provider/account?photo=invalid");
   const result = await submitProviderPhoto(
     {
-      userId,
       providerId: String(formData.get("providerId") ?? ""),
       file,
       consentAttested: formData.get("consentAttested") === "yes"

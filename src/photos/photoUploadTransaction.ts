@@ -7,7 +7,6 @@ export interface PhotoObjectStore {
 
 export interface PhotoRecordStore {
   create(input: {
-    userId: string;
     providerId: string;
     originalObjectKey: string;
     normalizedObjectKey: string;
@@ -20,9 +19,15 @@ export interface PhotoRecordStore {
   }): Promise<void>;
 }
 
+export class PhotoFinalizationStateUnknownError extends Error {
+  constructor() {
+    super("Provider photo finalization state is unknown.");
+    this.name = "PhotoFinalizationStateUnknownError";
+  }
+}
+
 export async function persistPhotoUpload(
   input: {
-    userId: string;
     providerId: string;
     originalObjectKey: string;
     normalizedObjectKey: string;
@@ -39,7 +44,6 @@ export async function persistPhotoUpload(
     await objects.upload(input.normalizedObjectKey, input.photo.normalizedBytes, "image/webp");
     uploaded.push(input.normalizedObjectKey);
     await records.create({
-      userId: input.userId,
       providerId: input.providerId,
       originalObjectKey: input.originalObjectKey,
       normalizedObjectKey: input.normalizedObjectKey,
@@ -51,7 +55,7 @@ export async function persistPhotoUpload(
       consentAttested: input.consentAttested
     });
   } catch (error) {
-    if (uploaded.length) {
+    if (uploaded.length && !(error instanceof PhotoFinalizationStateUnknownError)) {
       try {
         await objects.remove(uploaded);
       } catch {

@@ -7,7 +7,6 @@ import type {
 } from "./photoTypes.ts";
 
 export interface SubmitProviderPhotoInput {
-  userId: string;
   providerId: string;
   photo: ProcessedProviderPhoto;
   originalObjectKey: string;

@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { ProviderAdminIdentity } from "../providers/providerPersistence.ts";
 import { PhotoPersistenceError, type PhotoPersistence, type SubmitProviderPhotoInput } from "./photoPersistence.ts";
-import { persistPhotoUpload } from "./photoUploadTransaction.ts";
+import { persistPhotoUpload, PhotoFinalizationStateUnknownError } from "./photoUploadTransaction.ts";
 import type { ProviderPhotoRecord, PublicProviderPhoto } from "./photoTypes.ts";
 
 export const PROVIDER_PHOTO_BUCKET = "provider-photos-private";
@@ -26,6 +26,9 @@ export class SupabasePhotoPersistence implements PhotoPersistence {
   }
 
   async submitPhoto(input: SubmitProviderPhotoInput) {
+    if (!this.authenticatedClient) throw new PhotoPersistenceError();
+    const { data: { user }, error: userError } = await this.authenticatedClient.auth.getUser();
+    if (userError || !user) throw new PhotoPersistenceError();
     const bucket = this.privilegedClient.storage.from(PROVIDER_PHOTO_BUCKET);
     try {
       await persistPhotoUpload(
@@ -42,19 +45,40 @@ export class SupabasePhotoPersistence implements PhotoPersistence {
         },
         {
           create: async (record) => {
-            const { data, error } = await this.privilegedClient.rpc("submit_provider_photo", {
-              p_auth_user_id: record.userId,
-              p_provider_id: record.providerId,
-              p_original_object_key: record.originalObjectKey,
-              p_normalized_object_key: record.normalizedObjectKey,
-              p_original_media_type: record.originalMediaType,
-              p_byte_size: record.byteSize,
-              p_width: record.width,
-              p_height: record.height,
-              p_content_sha256: record.digest,
-              p_consent_attested: record.consentAttested
+            const { data: ticket, error: ticketError } = await this.privilegedClient
+              .from("provider_photo_upload_tickets")
+              .insert({
+                auth_user_id: user.id,
+                provider_id: record.providerId,
+                original_object_key: record.originalObjectKey,
+                normalized_object_key: record.normalizedObjectKey,
+                original_media_type: record.originalMediaType,
+                byte_size: record.byteSize,
+                width: record.width,
+                height: record.height,
+                content_sha256: record.digest,
+                consent_attested: record.consentAttested
+              })
+              .select("id")
+              .single();
+            if (ticketError || !ticket) throw new PhotoPersistenceError();
+            const { data, error } = await this.authenticatedClient!.rpc("submit_provider_photo", {
+              p_upload_ticket_id: ticket.id
             });
-            if (error || data !== true) throw new PhotoPersistenceError();
+            if (!error && data === true) return;
+            const { data: ticketState, error: ticketStateError } = await this.privilegedClient
+              .from("provider_photo_upload_tickets")
+              .select("consumed_at")
+              .eq("id", ticket.id)
+              .maybeSingle();
+            if (ticketState?.consumed_at) return;
+            if (ticketStateError || !ticketState) throw new PhotoFinalizationStateUnknownError();
+            const { error: deleteError } = await this.privilegedClient
+              .from("provider_photo_upload_tickets")
+              .delete()
+              .eq("id", ticket.id);
+            if (deleteError) throw new PhotoFinalizationStateUnknownError();
+            throw new PhotoPersistenceError();
           }
         }
       );
@@ -129,7 +153,10 @@ export class SupabasePhotoPersistence implements PhotoPersistence {
   async downloadPublicPhoto(providerId: string) {
     const photo = await this.getPublicPhoto(providerId);
     if (!photo) return null;
-    return this.downloadPhotoObject(photo.id, true);
+    const object = await this.downloadPhotoObject(photo.id, true);
+    if (!object) return null;
+    const confirmed = await this.getPublicPhoto(providerId);
+    return confirmed?.id === photo.id ? object : null;
   }
 
   private async callAuthenticated(functionName: string, parameters: Record<string, unknown>): Promise<void> {
