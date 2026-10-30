@@ -1,15 +1,7 @@
-import type { Metadata } from "next";
 import { LocalizedPrivacy } from "./localized-privacy";
-import { localeAlternates } from "../../src/i18n/locale.ts";
+import { buildPrivacyMetadata } from "../../src/seo/metadata.ts";
 
-export const metadata: Metadata = {
-  title: "Privacy",
-  description: "How MechanicMatchFL handles search, provider submission, and analytics data in the current MVP.",
-  alternates: {
-    ...localeAlternates("/privacy"),
-    canonical: "/privacy"
-  }
-};
+export const metadata = buildPrivacyMetadata("en");
 
 export default function PrivacyPage() {
   return <LocalizedPrivacy locale="en" />;

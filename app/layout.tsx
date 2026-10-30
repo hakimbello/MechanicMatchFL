@@ -18,8 +18,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   return (
     <html lang={locale === "es" ? "es-US" : "en-US"}>
       <body>
+        <a className="skip-link" href="#main-content">{messages.skipToContent}</a>
         <PublicNavigation />
-        {children}
+        <div id="main-content" tabIndex={-1}>{children}</div>
         <footer className="site-footer">
           {locale === "es" ? <Link href="/es/privacy">{messages.privacy}</Link> : <Link href="/privacy">{messages.privacy}</Link>}
           <Link href="/provider/login">{messages.providerAccount}</Link>

@@ -38,6 +38,7 @@ export function MechanicSearchExperience({ providers, locale = "en" }: { provide
   const [errors, setErrors] = useState<SearchFieldErrors>({});
   const [results, setResults] = useState<SearchResultView[] | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const hasErrors = Object.keys(errors).length > 0;
 
   const selectedServiceLabel = useMemo(
     () => serviceOptions.find((option) => option.value === form.serviceCategory)?.label,
@@ -90,6 +91,7 @@ export function MechanicSearchExperience({ providers, locale = "en" }: { provide
         </div>
 
         <form className="search-panel" onSubmit={handleSubmit} noValidate>
+          {hasErrors ? <p className="field-error form-error-summary" role="alert">{messages.home.correctErrors}</p> : null}
           <div className="form-grid">
             <div className="field-group">
               <label htmlFor={FIELD_IDS.year}>{messages.home.year}</label>

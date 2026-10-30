@@ -1,6 +1,15 @@
 import type { NextConfig } from "next";
 
-import { SECURITY_HEADERS } from "./src/security/headers.ts";
+import { NOINDEX_HEADERS, SECURITY_HEADERS } from "./src/security/headers.ts";
+
+const SENSITIVE_HTML_ROUTES = [
+  "/admin/:path*",
+  "/provider/:path*",
+  "/reviews/verify",
+  "/es/reviews/verify",
+  "/safety/report",
+  "/es/safety/report"
+] as const;
 
 const nextConfig: NextConfig = {
   agentRules: false,
@@ -11,6 +20,7 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      ...SENSITIVE_HTML_ROUTES.map((source) => ({ source, headers: NOINDEX_HEADERS })),
       {
         source: "/:path*",
         headers: SECURITY_HEADERS

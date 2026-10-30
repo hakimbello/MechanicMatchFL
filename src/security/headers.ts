@@ -21,3 +21,10 @@ export const SECURITY_HEADERS: SecurityHeader[] = [
     value: "DENY"
   }
 ];
+
+export const NOINDEX_HEADERS: SecurityHeader[] = [
+  {
+    key: "X-Robots-Tag",
+    value: "noindex, nofollow, noarchive"
+  }
+];

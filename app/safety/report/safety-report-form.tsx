@@ -9,9 +9,11 @@ import type { PublicLocale } from "../../../src/i18n/locale.ts";
 export function SafetyReportForm({ providerId = "", locale = "en" }: { providerId?: string; locale?: PublicLocale }) {
   const messages = getPublicMessages(locale).safety;
   const [state, action, pending] = useActionState<SafetyReportState, FormData>(submitSafetyReportAction, {});
+  const hasFieldErrors = Boolean(state.errors && Object.values(state.errors).some(Boolean));
   if (state.ok) return <div className="confirmation-panel"><h2>{messages.received}</h2><p>{messages.receivedBody}</p></div>;
   return <form className="submission-form" action={action}>
     <input name="locale" type="hidden" value={locale} />
+    {hasFieldErrors ? <p className="field-error form-error-summary" role="alert">{messages.correctErrors}</p> : null}
     {state.formError ? <p className="field-error" role="alert">{state.formError}</p> : null}
     <div className="field-group"><label htmlFor="safety-provider">{messages.providerId}</label><input id="safety-provider" name="providerId" defaultValue={providerId} /></div>
     <div className="field-group"><label htmlFor="safety-category">{messages.category}</label><select aria-describedby={state.errors?.category ? "safety-category-error" : undefined} aria-invalid={Boolean(state.errors?.category)} id="safety-category" name="category" required><option value="">{messages.choose}</option><option value="unsafe-work">{messages.unsafeWork}</option><option value="harassment">{messages.harassment}</option><option value="fraud">{messages.fraud}</option><option value="identity">{messages.identity}</option><option value="other">{messages.other}</option></select>{state.errors?.category ? <p className="field-error" id="safety-category-error">{state.errors.category}</p> : null}</div>

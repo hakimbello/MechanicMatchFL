@@ -71,6 +71,23 @@ export function buildListBusinessMetadata(locale: PublicLocale = "en"): Metadata
 
 export const listBusinessMetadata: Metadata = buildListBusinessMetadata("en");
 
+export function buildPrivacyMetadata(locale: PublicLocale = "en"): Metadata {
+  const messages = getPublicMessages(locale).metadata;
+  const path = localizePublicPath("/privacy", locale);
+  return {
+    title: messages.privacyTitle,
+    description: messages.privacyDescription,
+    alternates: { ...localeAlternates("/privacy"), canonical: path },
+    openGraph: {
+      title: `${messages.privacyTitle} | ${SITE_NAME}`,
+      description: messages.privacyDescription,
+      locale: locale === "es" ? "es_US" : "en_US",
+      url: buildAbsoluteUrl(path)
+    },
+    twitter: { title: `${messages.privacyTitle} | ${SITE_NAME}`, description: messages.privacyDescription }
+  };
+}
+
 export const adminProvidersMetadata: Metadata = {
   title: "Development provider review",
   robots: {

@@ -31,6 +31,28 @@ body {
   line-height: 1.5;
 }
 
+.skip-link {
+  position: fixed;
+  z-index: 1000;
+  top: 8px;
+  left: 8px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: var(--ink);
+  color: #fff;
+  font-weight: 900;
+  text-decoration: none;
+  transform: translateY(-160%);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+#main-content:focus {
+  outline: none;
+}
+
 .site-header {
   width: 100%;
   border-bottom: 1px solid var(--line);
@@ -46,6 +68,7 @@ body {
   gap: 14px;
   margin: 0 auto;
   padding: 8px 16px;
+  flex-wrap: wrap;
 }
 
 .site-brand,
@@ -61,7 +84,9 @@ body {
 }
 
 .site-nav-links {
-  display: none;
+  display: flex;
+  order: 3;
+  width: 100%;
   min-width: 0;
   gap: 14px;
   margin-left: auto;
@@ -136,6 +161,13 @@ a:focus-visible,
 .service-choice:has(input:focus-visible) {
   outline: 3px solid var(--focus);
   outline-offset: 3px;
+  box-shadow: 0 0 0 6px #fff;
+}
+
+.form-error-summary {
+  margin: 0;
+  border-left: 4px solid var(--danger);
+  padding: 8px 10px;
 }
 
 .page-shell {
@@ -905,6 +937,8 @@ textarea {
 
   .site-nav-links {
     display: flex;
+    order: initial;
+    width: auto;
   }
 
   .language-switcher {

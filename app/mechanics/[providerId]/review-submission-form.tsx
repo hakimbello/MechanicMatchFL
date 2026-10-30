@@ -16,6 +16,7 @@ export function ReviewSubmissionForm({ providerId, locale = "en" }: { providerId
   const [formError, setFormError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const hasFieldErrors = Object.values(errors).some(Boolean);
 
   function update<Field extends keyof typeof EMPTY_REVIEW>(field: Field, value: (typeof EMPTY_REVIEW)[Field]) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -50,6 +51,7 @@ export function ReviewSubmissionForm({ providerId, locale = "en" }: { providerId
 
   return (
     <form className="review-form" onSubmit={handleSubmit} noValidate>
+      {hasFieldErrors ? <p className="field-error form-error-summary" role="alert">{messages.correctErrors}</p> : null}
       <fieldset className="rating-fieldset">
         <legend>{messages.rating}</legend>
         <div className="rating-options">

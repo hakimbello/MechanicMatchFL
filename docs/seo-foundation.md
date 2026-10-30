@@ -26,13 +26,16 @@ The sitemap includes only legitimate public indexable URLs:
 
 - homepage;
 - `/list-your-business`;
+- `/privacy`;
 - active public mechanic profiles.
+
+Each eligible route is represented in English and Spanish with reciprocal `hreflang` entries and an English `x-default`.
 
 The sitemap excludes admin pages, query-parameter profile variants, unknown profiles, and providers that are submitted, under review, changes requested, rejected, deactivated, or otherwise not public. Sitemap provider eligibility must continue to use the same public-provider lifecycle rules as the application.
 
 ## Robots and noindex rules
 
-`/admin/*` is disallowed in robots and the admin provider review page is marked `noindex,nofollow`. Public pages, including active mechanic profiles, must remain crawlable.
+`/admin/*` is disallowed in robots. Admin, provider-account, review-verification, and confidential safety-report HTML routes emit `noindex,nofollow`; sensitive HTML routes also receive an `X-Robots-Tag` response header. Public pages, including active mechanic profiles, must remain crawlable.
 
 ## Mechanic-profile structured data
 
@@ -58,4 +61,4 @@ A future SEO landing page should not be published unless it has sufficient relev
 - Configure `NEXT_PUBLIC_SITE_URL` for production.
 - Confirm production sitemap and robots output under the final domain.
 - Add Search Console only after real domain ownership exists.
-- Preserve existing blockers for durable provider persistence, real admin authentication/authorization, production provider records, and lifecycle/publication safety. Provider images are deferred from V1.
+- Preserve existing blockers for the unexecuted M11-M14 migrations, private Storage setup, durable provider persistence, real admin authentication/authorization, production provider records, and lifecycle/publication safety.

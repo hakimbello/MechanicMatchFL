@@ -8,6 +8,7 @@ const en = {
     providerAccount: "Provider Account",
     safetyReport: "Safety Report",
     languageLabel: "Language",
+    skipToContent: "Skip to main content",
     english: "EN",
     spanish: "ES"
   },
@@ -34,7 +35,8 @@ const en = {
     verified: "Verified",
     viewProfile: "View Profile",
     noMatches: "No matching mechanics found for this search yet.",
-    noMatchesHelp: "Try a different repair need, vehicle make, or ZIP code."
+    noMatchesHelp: "Try a different repair need, vehicle make, or ZIP code.",
+    correctErrors: "Correct the highlighted fields and submit the search again."
   },
   profile: {
     back: "Back to Search",
@@ -89,7 +91,8 @@ const en = {
     rateLimited: "Too many review attempts. Please try again later.",
     duplicate: "A review for this provider could not be submitted again.",
     inactiveProvider: "This provider is not currently eligible for reviews.",
-    deliveryFailed: "The verification email could not be delivered. Please try again later."
+    deliveryFailed: "The verification email could not be delivered. Please try again later.",
+    correctErrors: "Correct the highlighted review fields and submit again."
   },
   verification: {
     eyebrow: "Review verification",
@@ -127,7 +130,8 @@ const en = {
     contactHelp: "Contact details are not shown to providers or the public.",
     submitting: "Submitting...",
     submit: "Submit Confidential Report",
-    unavailable: "The confidential report could not be submitted."
+    unavailable: "The confidential report could not be submitted.",
+    correctErrors: "Correct the highlighted report fields and submit again."
   },
   listing: {
     back: "Back to Search",
@@ -260,7 +264,8 @@ const en = {
     notFound: "Mechanic profile not found",
     safetyTitle: "Confidential safety report",
     verificationTitle: "Verify review email",
-    privacyTitle: "Privacy"
+    privacyTitle: "Privacy",
+    privacyDescription: "How MechanicMatchFL handles search, provider submission, reviews, safety reports, photos, and analytics data."
   }
 } as const;
 
@@ -273,7 +278,7 @@ export type PublicMessages = DeepWiden<typeof en>;
 const es: PublicMessages = {
   navigation: {
     home: "Buscar un mecánico", listBusiness: "Registra tu negocio", privacy: "Privacidad",
-    providerAccount: "Cuenta del proveedor", safetyReport: "Reporte de seguridad", languageLabel: "Idioma", english: "EN", spanish: "ES"
+    providerAccount: "Cuenta del proveedor", safetyReport: "Reporte de seguridad", languageLabel: "Idioma", skipToContent: "Saltar al contenido principal", english: "EN", spanish: "ES"
   },
   home: {
     region: "Miami-Dade y Broward", title: "Encuentra el mecánico adecuado para tu auto.",
@@ -283,7 +288,7 @@ const es: PublicMessages = {
     submit: "Buscar mecánico", matches: "Resultados", recommended: "Mecánicos recomendados", resultsPlaceholder: "Tus resultados aparecerán aquí",
     searchHelp: "Busca por vehículo, reparación y código postal para ver proveedores relevantes.", showing: "Proveedores para {service} cerca de {zip}.",
     result: "Resultado {number}", whyMatch: "Por qué {name} coincide", verified: "Verificado", viewProfile: "Ver perfil",
-    noMatches: "Aún no hay mecánicos que coincidan con esta búsqueda.", noMatchesHelp: "Prueba otra reparación, marca o código postal."
+    noMatches: "Aún no hay mecánicos que coincidan con esta búsqueda.", noMatchesHelp: "Prueba otra reparación, marca o código postal.", correctErrors: "Corrige los campos resaltados y vuelve a enviar la búsqueda."
   },
   profile: {
     back: "Volver a la búsqueda", photoAlt: "Foto del proveedor {name}", trustLabel: "Datos de confianza y ubicación del proveedor",
@@ -307,7 +312,7 @@ const es: PublicMessages = {
     submitting: "Enviando...", submit: "Enviar reseña", unavailable: "El envío de reseñas no está disponible temporalmente. Inténtalo más tarde.",
     emailUnavailable: "La verificación por correo aún no está disponible. Inténtalo más tarde.", rateLimited: "Demasiados intentos de reseña. Inténtalo más tarde.",
     duplicate: "No se pudo enviar otra reseña para este proveedor.", inactiveProvider: "Este proveedor no es elegible para reseñas actualmente.",
-    deliveryFailed: "No se pudo entregar el correo de verificación. Inténtalo más tarde."
+    deliveryFailed: "No se pudo entregar el correo de verificación. Inténtalo más tarde.", correctErrors: "Corrige los campos resaltados de la reseña y vuelve a enviarla."
   },
   verification: {
     eyebrow: "Verificación de reseña", title: "Verifica la propiedad del correo", intro: "Esto solo confirma el control de la dirección de correo. No verifica una compra, reparación o relación de servicio.",
@@ -323,7 +328,7 @@ const es: PublicMessages = {
     category: "Categoría del incidente", choose: "Selecciona una", unsafeWork: "Trabajo inseguro", harassment: "Acoso", fraud: "Fraude",
     identity: "Problema de identidad", other: "Otro", description: "¿Qué ocurrió?", reporterName: "Tu nombre (opcional y privado)",
     reporterEmail: "Correo de contacto (opcional y privado)", contactHelp: "Los datos de contacto no se muestran a proveedores ni al público.",
-    submitting: "Enviando...", submit: "Enviar reporte confidencial", unavailable: "No se pudo enviar el reporte confidencial."
+    submitting: "Enviando...", submit: "Enviar reporte confidencial", unavailable: "No se pudo enviar el reporte confidencial.", correctErrors: "Corrige los campos resaltados del reporte y vuelve a enviarlo."
   },
   listing: {
     back: "Volver a la búsqueda", eyebrow: "Registro de proveedor", title: "Registra tu negocio",
@@ -363,7 +368,8 @@ const es: PublicMessages = {
   metadata: {
     homeTitle: "Encuentra el mecánico adecuado para tu auto", homeDescription: "Encuentra talleres independientes, mecánicos móviles y especialistas en Miami-Dade y Broward según tu vehículo, reparación y código postal.",
     listingTitle: "Registra tu negocio mecánico", listingDescription: "Envía un taller o proveedor de reparación del sur de Florida para revisión en MechanicMatchFL.",
-    notFound: "Perfil del mecánico no encontrado", safetyTitle: "Reporte confidencial de seguridad", verificationTitle: "Verificar correo de reseña", privacyTitle: "Privacidad"
+    notFound: "Perfil del mecánico no encontrado", safetyTitle: "Reporte confidencial de seguridad", verificationTitle: "Verificar correo de reseña", privacyTitle: "Privacidad",
+    privacyDescription: "Cómo MechanicMatchFL maneja datos de búsqueda, registros de proveedores, reseñas, reportes de seguridad, fotos y analítica."
   }
 };
 

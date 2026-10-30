@@ -106,7 +106,7 @@ export async function renderMechanicProfilePage({ params, searchParams }: Mechan
 
         <section className="profile-hero" aria-labelledby="profile-title">
           <div className="profile-identity">
-            {publicPhoto ? <img className="provider-profile-photo" src={`/provider-photos/${encodeURIComponent(provider.id)}`} width={publicPhoto.width} height={publicPhoto.height} alt={formatMessage(messages.profile.photoAlt, { name: profile.name })} /> : null}
+            {publicPhoto ? <img className="provider-profile-photo" src={`/provider-photos/${encodeURIComponent(provider.id)}`} width={publicPhoto.width} height={publicPhoto.height} alt={formatMessage(messages.profile.photoAlt, { name: profile.name })} decoding="async" fetchPriority="high" /> : null}
             <div>
               <p className="eyebrow">{profile.providerType}</p>
               <h1 id="profile-title">{profile.name}</h1>
